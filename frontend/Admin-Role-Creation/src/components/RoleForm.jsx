@@ -30,7 +30,7 @@ function RoleForm() {
         console.log("Role Created:", roleData);
         alert(`Role "${roleName}" created successfully!`);
     }
-
+    
     return (
         <>
             <style>{styles}</style>
