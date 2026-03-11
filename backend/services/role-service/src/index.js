@@ -1,11 +1,13 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors")
 require("dotenv").config();
-
-const roleRoutes = require("./routes/roleRoutes");
+const roleRoutes = require("./routes/RoleRoutes");
 
 const app = express();
 app.use(express.json());
+app.use(cors());
+
 
 app.use("/roles", roleRoutes);
 

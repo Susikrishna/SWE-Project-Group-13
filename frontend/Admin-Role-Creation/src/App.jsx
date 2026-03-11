@@ -3,13 +3,21 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import CreateRolePage from './pages/CreateRole'
+import Roles from './pages/Roles'
+import Home from './pages/Home'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <>
-      <CreateRolePage/>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/newRole" element={<CreateRolePage />} />
+        <Route path="/role" element={<Roles />} />
+        <Route path="" element = {<Home/>}/>
+      
+      </Routes>
+    </BrowserRouter>
   )
 }
 

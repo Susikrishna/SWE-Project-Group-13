@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const routes = [
-    {label: "Dashboard", id: "dashboard" },
-    { label: "Users", id: "users" },
-    {label: "Roles", id: "roles" },
-    {label: "Frontends", id: "frontends" },
-    {label: "Services", id: "services" },
-    {label: "Logs", id: "logs" },
+    { id: "", path: "/", label: "Home", icon: "⌂" },
+    { id: "newRole", path: "/newRole", label: "Create Role", icon: "✦" },
+    { id: "role", path: "/role", label: "All Roles", icon: "◈" },
+    
 ];
 
-function Navbar({ activePage, onNavigate }) {
+function Navbar() {
+    const navigate = useNavigate();
+    const location = useLocation();
+
     return (
         <>
             <style>{navStyles}</style>
@@ -19,8 +20,8 @@ function Navbar({ activePage, onNavigate }) {
                 {routes.map((route) => (
                     <button
                         key={route.id}
-                        className={`nav-link ${activePage === route.id ? "active" : ""}`}
-                        onClick={() => onNavigate?.(route.id)}
+                        className={`nav-link ${location.pathname === route.path ? "active" : ""}`}
+                        onClick={() => navigate(route.path)}
                     >
                         <span className="nav-icon">{route.icon}</span>
                         {route.label}

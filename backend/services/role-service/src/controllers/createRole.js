@@ -14,7 +14,6 @@ const createRole = async (req,res) => {
             microfrontends: frontends || [],
             microservices: services || [],
         });
-        
         res.status(201).json(role);
     } catch (err) {
         res.status(400).json({ error: err.message });

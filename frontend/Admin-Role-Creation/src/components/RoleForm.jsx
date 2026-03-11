@@ -1,16 +1,20 @@
 import { useState } from "react";
-
+import axios from "axios";
 function RoleForm() {
     const [roleName, setRoleName] = useState("");
 
     const [microfrontends, setMicrofrontends] = useState([
         { id: "f1", label: "frontend1", checked: false },
         { id: "f2", label: "frontend2", checked: false },
+        { id: "f3", label: "frontend3", checked: false },
+        { id: "f4", label: "frontend4", checked: false },
     ]);
     
     const [microservices, setMicroservices] = useState([
         { id: "s1", label: "service1", checked: false },
         { id: "s2", label: "service2", checked: false },
+        { id: "s3", label: "service3", checked: false },
+        { id: "s4", label: "service4", checked: false },
     ]);
     
     const toggleItem = (list, setList, id) => {
@@ -20,15 +24,26 @@ function RoleForm() {
     const selectedFrontends = microfrontends.filter((f) => f.checked);
     const selectedServices = microservices.filter((s) => s.checked);
 
-    function handleSubmit(e) {
+    const handleSubmit = async(e) => {
         e.preventDefault();
         const roleData = {
             name: roleName,
             frontends: selectedFrontends.map((f) => f.id),
             services: selectedServices.map((s) => s.id),
         };
+        
+        const response = await axios.post('http://localhost:6969/roles', roleData, {
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+        
         console.log("Role Created:", roleData);
         alert(`Role "${roleName}" created successfully!`);
+        setRoleName("");
+        setMicrofrontends(microfrontends.map((f) => ({ ...f, checked: false })));
+        setMicroservices(microservices.map((s) => ({ ...s, checked: false })));
+    
     }
     
     return (
