@@ -2,6 +2,9 @@ import { useState } from "react";
 import axios from "axios";
 function RoleForm() {
     const [roleName, setRoleName] = useState("");
+    const [isTemp, setIsTemp] = useState(false)
+    const [startDate, setStartDate] = useState(new Date())
+    const [endDate, setEndDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000))
 
     const [microfrontends, setMicrofrontends] = useState([
         { id: "f1", label: "frontend1", checked: false },
@@ -9,14 +12,14 @@ function RoleForm() {
         { id: "f3", label: "frontend3", checked: false },
         { id: "f4", label: "frontend4", checked: false },
     ]);
-    
+
     const [microservices, setMicroservices] = useState([
         { id: "s1", label: "service1", checked: false },
         { id: "s2", label: "service2", checked: false },
         { id: "s3", label: "service3", checked: false },
         { id: "s4", label: "service4", checked: false },
     ]);
-    
+
     const toggleItem = (list, setList, id) => {
         setList(list.map((item) => item.id === id ? { ...item, checked: !item.checked } : item));
     };
@@ -24,28 +27,31 @@ function RoleForm() {
     const selectedFrontends = microfrontends.filter((f) => f.checked);
     const selectedServices = microservices.filter((s) => s.checked);
 
-    const handleSubmit = async(e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const roleData = {
             name: roleName,
             frontends: selectedFrontends.map((f) => f.id),
             services: selectedServices.map((s) => s.id),
+            isTemp: isTemp,
+            startDate: startDate,
+            endDate : endDate,
         };
-        
+
         const response = await axios.post('http://localhost:6969/roles', roleData, {
             headers: {
                 'Content-Type': 'application/json',
             },
         });
-        
+
         console.log("Role Created:", roleData);
         alert(`Role "${roleName}" created successfully!`);
         setRoleName("");
         setMicrofrontends(microfrontends.map((f) => ({ ...f, checked: false })));
         setMicroservices(microservices.map((s) => ({ ...s, checked: false })));
-    
+
     }
-    
+
     return (
         <>
             <style>{styles}</style>
@@ -104,9 +110,40 @@ function RoleForm() {
                                 />
                                 <label>{item.label}</label>
                             </div>
-                        
+
                         ))}
                     </div>
+
+                    <div onClick={() => setIsTemp(!isTemp)} style={{ marginBottom: "10px" }} className={`permission-item ${isTemp ? "checked" : ""}`}>
+                        <input 
+                                type="checkbox" 
+                                checked={isTemp} 
+                                onChange={() => { }} />
+                        <label>Is the Role Temporary?</label>
+                    </div>
+                    
+                    {isTemp && <div className="date-range">
+                        <div className="form-group">
+                            <label>Start Date</label>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                required={isTemp}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>End Date</label>
+                            <input
+                                type="date"
+                                value={endDate}
+                                min={startDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                required={isTemp}
+                            />
+                        </div>
+                    </div>
+                    }
                     
                     <button
                         className="submit-btn"
@@ -115,7 +152,7 @@ function RoleForm() {
                     >
                         Create Role
                     </button>
-                
+
                 </form>
             </div>
         </>
@@ -313,5 +350,15 @@ const styles = `
 .selection-count span {
     color: #1a1666;
     font-weight: 600;
+}
+
+date-range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+    margin-bottom:16px;
+    padding:10px;
+    
 }
 `;

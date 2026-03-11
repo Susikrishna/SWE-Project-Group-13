@@ -2,7 +2,7 @@ const Role = require("../models/Role");
 
 const createRole = async (req,res) => {
     try{
-        const {name,frontends, services} = req.body
+        const {name,frontends, services, isTemp, startDate, endDate} = req.body
         console.log(name)
         const prev = await Role.findOne({ name: name.trim().toLowerCase() })
         console.log("prev:",prev)
@@ -13,6 +13,9 @@ const createRole = async (req,res) => {
             name: name.trim().toLowerCase(),
             microfrontends: frontends || [],
             microservices: services || [],
+            isTemp:isTemp,
+            startDate:startDate,
+            endDate:endDate,
         });
         res.status(201).json(role);
     } catch (err) {
