@@ -1,63 +1,152 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
+
 function RoleForm() {
     const [roleName, setRoleName] = useState("");
-    const [isTemp, setIsTemp] = useState(false)
-    const [startDate, setStartDate] = useState(new Date())
-    const [endDate, setEndDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000))
-
-    const [microfrontends, setMicrofrontends] = useState([
-        { id: "f1", label: "frontend1", checked: false },
-        { id: "f2", label: "frontend2", checked: false },
-        { id: "f3", label: "frontend3", checked: false },
-        { id: "f4", label: "frontend4", checked: false },
-    ]);
-
-    const [microservices, setMicroservices] = useState([
-        { id: "s1", label: "service1", checked: false },
-        { id: "s2", label: "service2", checked: false },
-        { id: "s3", label: "service3", checked: false },
-        { id: "s4", label: "service4", checked: false },
-    ]);
-
-    const toggleItem = (list, setList, id) => {
-        setList(list.map((item) => item.id === id ? { ...item, checked: !item.checked } : item));
-    };
-
-    const selectedFrontends = microfrontends.filter((f) => f.checked);
-    const selectedServices = microservices.filter((s) => s.checked);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const roleData = {
-            name: roleName,
-            frontends: selectedFrontends.map((f) => f.id),
-            services: selectedServices.map((s) => s.id),
-            isTemp: isTemp,
-            startDate: startDate,
-            endDate : endDate,
+    const [isTemp, setIsTemp] = useState(false);
+    const [startDate, setStartDate] = useState("");
+    const [endDate, setEndDate] = useState("");
+    const [microfrontends, setMicrofrontends] = useState([]);
+    const [microservices, setMicroservices] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selectedActions, setSelectedActions] = useState({});
+    
+    useEffect(() => {
+        const fetchRegistries = async () => {
+            try {
+                const response = await axios.get("http://localhost:6970/registry");
+                const data = response.data.data;
+                console.log(data)
+                console.log(data[0].exposedPermissions)
+                const mfes = data
+                    .filter((s) => s.serviceType === "microfrontend" && s.isActive)
+                    .map((s) => ({
+                        _id: s._id,
+                        id: s.serviceIdentifier,
+                        label: s.serviceName,
+                        exposedPermissions: s.exposedPermissions,
+                        description: s.description,
+                        checked: false,
+                    }));
+                const services = data
+                    .filter((s) => s.serviceType === "microservice" && s.isActive)
+                    .map((s) => ({
+                        _id: s._id,
+                        id: s.serviceIdentifier,
+                        label: s.serviceName,
+                        exposedPermissions: s.exposedPermissions,
+                        description: s.description,
+                        checked: false,
+                    }));
+                
+                setMicrofrontends(mfes);
+                setMicroservices(services);
+            } catch (err) {
+                setError("Failed to load services. Please try again.");
+            } finally {
+                setLoading(false);
+            }
         };
 
-        const response = await axios.post('http://localhost:6969/roles', roleData, {
-            headers: {
-                'Content-Type': 'application/json',
-            },
+        fetchRegistries();
+    }, []);
+    
+    const toggleService = (type, item) => {
+        const setList = type === "mfe" ? setMicrofrontends : setMicroservices;
+        const isChecked = !item.checked;
+        
+        setList((prev) =>
+            prev.map((s) => s._id === item._id ? { ...s, checked: isChecked } : s)
+        );
+        
+        setSelectedActions((prev) => {
+            const updated = { ...prev };
+            if (isChecked) {
+                updated[item._id] = new Set(
+                    item.exposedPermissions.map((p) => `${p.resource}:${p.action}`)
+                );
+            } else {
+                delete updated[item._id];
+            }
+            return updated;
         });
+    };
 
-        console.log("Role Created:", roleData);
-        alert(`Role "${roleName}" created successfully!`);
-        setRoleName("");
-        setMicrofrontends(microfrontends.map((f) => ({ ...f, checked: false })));
-        setMicroservices(microservices.map((s) => ({ ...s, checked: false })));
+    const toggleAction = (serviceId, resource, action, type) => {
+        const setList = type === "mfe" ? setMicrofrontends : setMicroservices;
+        const key = `${resource}:${action}`;
 
-    }
+        setSelectedActions((prev) => {
+            const current = new Set(prev[serviceId] || []);
+
+            if (current.has(key)) {
+                current.delete(key);
+            } else {
+                current.add(key);
+            }
+
+            if (current.size === 0) {
+                setList((prevList) =>
+                    prevList.map((s) =>
+                        s._id === serviceId ? { ...s, checked: false } : s
+                    )
+                );
+
+                const updated = { ...prev };
+                delete updated[serviceId];
+                return updated;
+            }
+
+            return { ...prev, [serviceId]: current };
+        });
+    };
+    
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const allSelected = [...microfrontends, ...microservices].filter((s) => s.checked);
+
+        if (allSelected.length === 0) {
+            alert("Please select at least one service.");
+            return;
+        }
+
+        const allowedServices = allSelected.map((s) => ({
+            serviceId: s._id,
+            actions: Array.from(selectedActions[s._id] || []),
+        }));
+
+        const roleData = {
+            name: roleName,
+            allowedServices,
+            isTemp,
+            ...(isTemp && { startDate, endDate }),
+        };
+        
+        try {
+            await axios.post("http://localhost:6969/roles", roleData, {
+                headers: { "Content-Type": "application/json" },
+            });
+            alert(`Role "${roleName}" created successfully!`);
+            setRoleName("");
+            setIsTemp(false);
+            setStartDate("");
+            setEndDate("");
+            setSelectedActions({});
+            setMicrofrontends((prev) => prev.map((f) => ({ ...f, checked: false })));
+            setMicroservices((prev) => prev.map((s) => ({ ...s, checked: false })));
+        } catch (err) {
+            alert(err.response?.data?.error || "Failed to create role.");
+        }
+    };
 
     return (
         <>
             <style>{styles}</style>
             <div className="role-container">
                 <form className="role-form" onSubmit={handleSubmit}>
-
+                    
                     <div className="form-header">
                         <h2>Create Role</h2>
                     </div>
@@ -72,87 +161,152 @@ function RoleForm() {
                             required
                         />
                     </div>
-
+                    
                     <div className="form-divider" />
-
                     <p className="section-title">Microfrontend Access</p>
-                    <div className="permissions">
-                        {microfrontends.map((item) => (
-                            <div
-                                key={item.id}
-                                className={`permission-item ${item.checked ? "checked" : ""}`}
-                                onClick={() => toggleItem(microfrontends, setMicrofrontends, item.id)}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={item.checked}
-                                    onChange={() => { }}
-                                />
-                                <label>{item.label}</label>
-                            </div>
-                        ))}
-                    </div>
+                    {loading ? (
+                        <p className="status-text">Loading services...</p>
+                    ) : error ? (
+                        <p className="status-text error">{error}</p>
+                    ) : microfrontends.length === 0 ? (
+                        <p className="status-text">No microfrontends registered.</p>
+                    ) : (
+                        <div className="service-list">
+                            {microfrontends.map((item) => (
+                                <div key={item._id} className={`service-card ${item.checked ? "checked" : ""}`}>
+                                    <div
+                                        className="service-header"
+                                        onClick={() => toggleService("mfe", item)}
+                                    >
+                                        <input type="checkbox" checked={item.checked} onChange={() => { }} />
+                                        <span className="service-name">{item.label}</span>
+                                        <span className="service-id">{item.id}</span>
+                                    </div>
+                                    {item.checked && (
+                                        <div className="actions-list">
+                                            <p className="actions-title">Resource List:</p>
+                                            <div className="actions-grid">
+                                                {item.exposedPermissions.map((perm) => {
+                                                    const key = `${perm.resource}:${perm.action}`;
+                                                    const isSelected = selectedActions[item._id]?.has(key);
+                                                    return (
+                                                        <div
+                                                            key={perm.resource}
+                                                            className={`action-chip ${isSelected ? "selected" : ""}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleAction(item._id, perm.resource,perm.action, "mfe");
+                                                            }}
+                                                        >
+                                                            <input type="checkbox" checked={isSelected} readOnly />
+                                                            <span className="action-name">{perm.resource } : </span>
+                                                            <span className="action-desc">{perm.action}</span>
+                                                            
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    
+                    <div className="form-divider" />
+                    <p className="section-title">Microservice Access</p>
+                    {loading ? (
+                        <p className="status-text">Loading services...</p>
+                    ) : error ? (
+                        <p className="status-text error">{error}</p>
+                    ) : microservices.length === 0 ? (
+                        <p className="status-text">No microservices registered.</p>
+                    ) : (
+                        <div className="service-list">
+                            {microservices.map((item) => (
+                                <div key={item._id} className={`service-card ${item.checked ? "checked" : ""}`}>
+                                    <div
+                                        className="service-header"
+                                        onClick={() => toggleService("service", item)}
+                                    >
+                                        <input type="checkbox" checked={item.checked} onChange={() => { }} />
+                                        <span className="service-name">{item.label}</span>
+                                        <span className="service-id">{item.id}</span>
+                                    </div>
+                                    {item.checked && (
+                                        <div className="actions-list">
+                                            <p className="actions-title">Resource List:</p>
+                                            <div className="actions-grid">
+                                                {item.exposedPermissions.map((perm) => {
+                                                    const key = `${perm.resource}:${perm.action}`;
+                                                    const isSelected = selectedActions[item._id]?.has(key);
+                                                    return (
+                                                        <div
+                                                            key={perm.resource}
+                                                            className={`action-chip ${isSelected ? "selected" : ""}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleAction(item._id, perm.resource,perm.action, "service");
+                                                            }}
+                                                        >
+                                                            <input type="checkbox" checked={isSelected} readOnly />
+                                                            <span className="action-name">{perm.resource} : </span>
+                                                            <span className="action-desc">{perm.action}</span>
+
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="form-divider" />
 
-                    <p className="section-title">Microservice Access</p>
-                    <div className="permissions">
-                        {microservices.map((item) => (
-                            <div
-                                key={item.id}
-                                className={`permission-item ${item.checked ? "checked" : ""}`}
-                                onClick={() => toggleItem(microservices, setMicroservices, item.id)}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={item.checked}
-                                    onChange={() => { }}
-                                />
-                                <label>{item.label}</label>
-                            </div>
-
-                        ))}
-                    </div>
-
-                    <div onClick={() => setIsTemp(!isTemp)} style={{ marginBottom: "10px" }} className={`permission-item ${isTemp ? "checked" : ""}`}>
-                        <input 
-                                type="checkbox" 
-                                checked={isTemp} 
-                                onChange={() => { }} />
+                    <div
+                        onClick={() => setIsTemp(!isTemp)}
+                        className={`permission-item ${isTemp ? "checked" : ""}`}
+                        style={{ marginBottom: "10px" }}
+                    >
+                        <input type="checkbox" checked={isTemp} onChange={() => { }} />
                         <label>Is the Role Temporary?</label>
                     </div>
-                    
-                    {isTemp && <div className="date-range">
-                        <div className="form-group">
-                            <label>Start Date</label>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                required={isTemp}
-                            />
+
+                    {isTemp && (
+                        <div className="date-range">
+                            <div className="form-group">
+                                <label>Start Date</label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    required={isTemp}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>End Date</label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    min={startDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    required={isTemp}
+                                />
+                            </div>
                         </div>
-                        <div className="form-group">
-                            <label>End Date</label>
-                            <input
-                                type="date"
-                                value={endDate}
-                                min={startDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                required={isTemp}
-                            />
-                        </div>
-                    </div>
-                    }
+                    )}
                     
                     <button
                         className="submit-btn"
                         type="submit"
-                        disabled={!roleName.trim()}
+                        disabled={!roleName.trim() || loading}
                     >
                         Create Role
                     </button>
-
+                
                 </form>
             </div>
         </>
@@ -189,14 +343,6 @@ const styles = `
     font-size: 22px;
     font-weight: 700;
     color: #111827;
-    margin: 0 0 6px 0;
-    letter-spacing: -0.3px;
-}
-
-.form-header p {
-    font-size: 13px;
-    color: #6b7280;
-    margin: 0;
 }
 
 .form-divider {
@@ -219,7 +365,8 @@ const styles = `
     letter-spacing: 0.8px;
 }
 
-.form-group input[type="text"] {
+.form-group input[type="text"],
+.form-group input[type="date"] {
     width: 100%;
     padding: 11px 14px;
     border-radius: 8px;
@@ -233,14 +380,10 @@ const styles = `
     outline: none;
 }
 
-.form-group input[type="text"]:focus {
+.form-group input:focus {
     border-color: #070441;
     box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
     background: #ffffff;
-}
-
-.form-group input[type="text"]::placeholder {
-    color: #9ca3af;
 }
 
 .section-title {
@@ -248,14 +391,135 @@ const styles = `
     font-weight: 600;
     color: #6b7280;
     text-transform: uppercase;
-    margin: 0 0 14px 0;
+    margin-bottom: 14px;
 }
 
-.permissions {
+.service-list {
     display: flex;
     flex-direction: column;
+    gap: 14px;
+}
+
+.service-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fafafa;
+    transition: border 0.2s, background 0.2s;
+}
+
+.service-card.checked {
+    border-color: #090649;
+    background: #f4f6ff;
+}
+
+.service-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+}
+
+.service-header:hover {
+    background: #eef0fd;
+}
+
+.service-header input {
+    appearance: none;
+    width: 17px;
+    height: 17px;
+    border-radius: 5px;
+    border: 1.5px solid #d1d5db;
+    background: white;
+}
+
+.service-header input:checked {
+    background: #090649;
+    border-color: #040220;
+}
+
+.service-name {
+    font-weight: 600;
+    color: #111827;
+}
+
+.service-id {
+    margin-left: auto;
+    font-size: 12px;
+    color: #6b7280;
+    font-family: 'DM Mono', monospace;
+}
+
+.actions-list {
+    padding: 14px 16px 18px 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.actions-title {
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
     gap: 8px;
-    margin-bottom: 28px;
+}
+
+.action-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 7px;
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    transition: all 0.15s;
+}
+
+.action-chip:hover {
+    background: #eef0fd;
+    border-color: #c7d0fb;
+}
+
+.action-chip.selected {
+    background: #eef2ff;
+    border-color: #090649;
+}
+
+.action-chip input {
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 4px;
+    border: 1.5px solid #d1d5db;
+}
+
+.action-chip input:checked {
+    background: #090649;
+    border-color: #040220;
+}
+
+.action-name {
+    font-weight: 600;
+}
+
+.action-desc {
+    color: #6b7280;
+}
+
+.status-text {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.status-text.error {
+    color: #dc2626;
 }
 
 .permission-item {
@@ -267,67 +531,36 @@ const styles = `
     border: 1px solid #e5e7eb;
     background: #f9fafb;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-}
-
-.permission-item:hover {
-    background: #eef0fd;
-    border-color: #c7d0fb;
 }
 
 .permission-item.checked {
     background: #eef2ff;
-    border-color: #111c54;
+    border-color: #090649;
 }
 
-.permission-item input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 17px;
-    height: 17px;
-    border-radius: 5px;
-    border: 1.5px solid #d1d5db;
-    background: #ffffff;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.15s;
-    position: relative;
+.date-range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
 }
-
-.permission-item input[type="checkbox"]:checked {
-    background: #090649;
-    border-color: #040220;
-}
-
-.permission-item label {
-    font-size: 13.5px;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    font-family: 'DM Mono', monospace;
-    flex: 1;
-}
-
 
 .submit-btn {
     width: 100%;
     padding: 13px;
     background: #090734;
-    color: #ffffff;
+    color: white;
     border: none;
     border-radius: 9px;
     font-family: 'DM Sans', sans-serif;
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
-    letter-spacing: 0.2px;
-    transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
-    box-shadow: 0 4px 16px rgba(79,70,229,0.3);
+    transition: opacity 0.2s, transform 0.1s;
 }
 
 .submit-btn:hover {
     opacity: 0.92;
-    box-shadow: 0 6px 20px rgba(20, 16, 83, 0.4);
 }
 
 .submit-btn:active {
@@ -337,28 +570,5 @@ const styles = `
 .submit-btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.selection-count {
-    font-size: 11.5px;
-    color: #9ca3af;
-    margin-bottom: 10px;
-}
-
-.selection-count span {
-    color: #1a1666;
-    font-weight: 600;
-}
-
-date-range {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin-top: 16px;
-    margin-bottom:16px;
-    padding:10px;
-    
 }
 `;

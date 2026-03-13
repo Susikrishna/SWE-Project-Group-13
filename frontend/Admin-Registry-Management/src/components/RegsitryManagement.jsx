@@ -87,7 +87,7 @@ const RegistryManagement = () => {
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const response = await fetch("http://localhost:3001/registry", {
+      const response = await fetch("http://localhost:6970/registry", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

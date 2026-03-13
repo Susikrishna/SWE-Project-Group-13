@@ -1,6 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors")
+require('./models/Role')
+require('../../registry-service/src/models/RegistryModel')
 require("dotenv").config();
 const roleRoutes = require("./routes/RoleRoutes");
 

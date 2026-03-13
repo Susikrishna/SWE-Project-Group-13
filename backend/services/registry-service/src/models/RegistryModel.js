@@ -8,14 +8,14 @@ const permissionSchema = new mongoose.Schema(
     trim: true,
     lowercase: true
   },
-
+  
   action: {
     type: String,
     required: true,
     trim: true,
     lowercase: true
   },
-
+  
   description: {
     type: String,
     trim: true
@@ -39,25 +39,25 @@ const registrySchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-
+  
   description: {
     type: String,
     trim: true
   },
-
+  
   serviceType: {
     type: String,
     required: true,
     enum: ["microservice", "microfrontend"]
   },
-
+  
   baseUrl: {
     type: String,
     required: true,
     trim: true,
     match: /^https?:\/\/.+/
   },
-
+  
   exposedPermissions: {
     type: [permissionSchema],
 
