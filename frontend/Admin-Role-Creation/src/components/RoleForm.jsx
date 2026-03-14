@@ -180,7 +180,6 @@ function RoleForm() {
                                     >
                                         <input type="checkbox" checked={item.checked} onChange={() => { }} />
                                         <span className="service-name">{item.label}</span>
-                                        <span className="service-id">{item.id}</span>
                                     </div>
                                     {item.checked && (
                                         <div className="actions-list">
@@ -231,7 +230,6 @@ function RoleForm() {
                                     >
                                         <input type="checkbox" checked={item.checked} onChange={() => { }} />
                                         <span className="service-name">{item.label}</span>
-                                        <span className="service-id">{item.id}</span>
                                     </div>
                                     {item.checked && (
                                         <div className="actions-list">

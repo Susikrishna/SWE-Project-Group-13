@@ -60,7 +60,7 @@ const registrySchema = new mongoose.Schema({
   
   exposedPermissions: {
     type: [permissionSchema],
-
+    
     validate: {
       validator: function (permissions) {
         const set = new Set(
