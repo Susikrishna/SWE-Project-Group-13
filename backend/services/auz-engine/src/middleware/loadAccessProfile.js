@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Role = require("../models/Role");
 const {
     buildRoleSummary,
@@ -24,7 +25,11 @@ const loadAccessProfile = async (req, res, next) => {
             });
         }
 
-        const roles = await Role.find({ _id: { $in: roleIds } }).lean();
+        const objectRoleIds = roleIds.map(
+            (id) => new mongoose.Types.ObjectId(id)
+        );
+
+        const roles = await Role.find({ _id: { $in: objectRoleIds } }).lean(); 
         if (roles.length === 0) {
             return res.status(403).json({ error: "No roles found for the current token" });
         }
