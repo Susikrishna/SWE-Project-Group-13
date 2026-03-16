@@ -8,7 +8,9 @@ const mongoose = require("mongoose");
 // Register models (order matters — Role references ServiceRegistry)
 require("./models/RegistryModel");
 require("./models/Role");
+const connectDB = require("./config/db")
 
+connectDB()
 const authRoutes = require("./routes/authRoutes");
 
 const app = express();
