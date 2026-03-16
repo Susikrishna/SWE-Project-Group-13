@@ -1,13 +1,30 @@
 const axios = require("axios");
+const { execSync } = require("child_process");
 
-// paste your generated token here
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkdW1teV91c2VyXzAwMSIsInJvbGVJZCI6IjY5YjgzNjFhYzhlZGUxNmU1N2Q1OTYyNiIsImlhdCI6MTc3MzY4MTA5OSwiZXhwIjoxNzczNzA5ODk5fQ.Jk7lvFH9B6Kg3vgfrp_65x2R23LuswcV-EGFnXQk7Gs";
-
+const ROLE_ID = "69b8361ac8ede16e57d59626";
+// const ROLE_ID = "69b8365b9c477bcf45d20264";
 const BASE_URL = "http://localhost:4000";
+
+function generateToken() {
+    console.log("\nGenerating JWT token...");
+
+    const output = execSync(
+        `node services/auz-engine/src/utils/generateDummyToken.js ${ROLE_ID}`
+    ).toString();
+
+    const tokenLine = output.split("\n").find(line => line.startsWith("Bearer"));
+    const token = tokenLine.split(" ")[1];
+
+    return token;
+}
 
 async function runTests() {
     try {
-        console.log("\n---- Testing /auth/authorize ----");
+        const TOKEN = generateToken();
+
+        console.log("\nToken generated successfully\n");
+
+        console.log("---- Testing /auth/authorize ----");
 
         const authRes = await axios.get(`${BASE_URL}/auth/authorize`, {
             headers: { Authorization: `Bearer ${TOKEN}` }
@@ -21,8 +38,8 @@ async function runTests() {
         const accessRes = await axios.post(
             `${BASE_URL}/auth/check-access`,
             {
-                serviceId: "6650000000000000000000a6",
-                action: "dashboard:view"
+                serviceId: "6650000000000000000000a2",
+                action: "user:update"
             },
             {
                 headers: {
