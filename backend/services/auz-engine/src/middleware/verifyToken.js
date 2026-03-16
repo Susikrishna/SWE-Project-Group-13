@@ -6,7 +6,7 @@ const jwt = require("jsonwebtoken");
  * On failure returns 401 / 403.
  *
  * Expected token payload shape:
- *   { userId: string, roleId: string, iat: number, exp: number }
+ *   { userId: string, roleId?: string, roleIds?: string[], iat: number, exp: number }
  */
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];

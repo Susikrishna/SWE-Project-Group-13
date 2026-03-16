@@ -1,6 +1,5 @@
-const mongoose = require("mongoose");
-const Role = require("../models/Role");
 const ServiceRegistry = require("../models/RegistryModel");
+const { hasPermission } = require("../utils/accessProfile");
 
 /**
  * GET /auth/authorize
@@ -27,45 +26,23 @@ const ServiceRegistry = require("../models/RegistryModel");
  * }
  */
 const authorize = async (req, res) => {
-  const { userId, roleId } = req.tokenPayload;
+  const accessProfile = req.accessProfile;
+  const { userId, roleSummaries, mergedAllowedServices, permissionsByService } = accessProfile;
 
-  // ── 1. Validate roleId ──────────────────────────────────────────────────────
-  if (!roleId || !mongoose.Types.ObjectId.isValid(roleId)) {
-    return res.status(400).json({
-      error: "Token payload is missing a valid 'roleId' field",
-    });
-  }
-
-  // ── 2. Fetch the role ───────────────────────────────────────────────────────
-  const role = await Role.findById(roleId).lean();
-  if (!role) {
-    return res.status(404).json({ error: `Role '${roleId}' not found` });
-  }
-
-  // ── 3. Check temporary role validity ───────────────────────────────────────
-  if (role.isTemp) {
-    const now = new Date();
-    if (now < new Date(role.startDate) || now > new Date(role.endDate)) {
-      return res.status(403).json({
-        error: "Temporary role is outside its valid date range",
-        validFrom: role.startDate,
-        validUntil: role.endDate,
-      });
-    }
-  }
-
-  // ── 4. No services assigned? Return early ──────────────────────────────────
-  if (!role.allowedServices || role.allowedServices.length === 0) {
+  // ── 1. No services assigned? Return early ──────────────────────────────────
+  if (!mergedAllowedServices || mergedAllowedServices.length === 0) {
     return res.status(200).json({
       userId,
-      role: buildRoleSummary(role),
+      role: roleSummaries[0] || null,
+      roles: roleSummaries,
+      permissionsByService,
       microservices: [],
       microfrontends: [],
     });
   }
 
-  // ── 5. Fetch all referenced registry entries in one query ──────────────────
-  const serviceIds = role.allowedServices.map((s) => s.serviceId);
+  // ── 2. Fetch all referenced registry entries in one query ──────────────────
+  const serviceIds = mergedAllowedServices.map((s) => s.serviceId);
   const registryEntries = await ServiceRegistry.find({
     _id: { $in: serviceIds },
     isActive: true,
@@ -76,11 +53,11 @@ const authorize = async (req, res) => {
     registryEntries.map((entry) => [entry._id.toString(), entry])
   );
 
-  // ── 6. Build response arrays, split by serviceType ─────────────────────────
+  // ── 3. Build response arrays, split by serviceType ─────────────────────────
   const microservices = [];
   const microfrontends = [];
 
-  for (const { serviceId, actions } of role.allowedServices) {
+  for (const { serviceId, actions } of mergedAllowedServices) {
     const entry = registryById[serviceId.toString()];
 
     // Skip if the service doesn't exist or was deactivated
@@ -95,26 +72,34 @@ const authorize = async (req, res) => {
     }
   }
 
-  // ── 7. Respond ──────────────────────────────────────────────────────────────
+  // ── 4. Respond ──────────────────────────────────────────────────────────────
   return res.status(200).json({
     userId,
-    role: buildRoleSummary(role),
+    role: roleSummaries[0] || null,
+    roles: roleSummaries,
+    permissionsByService,
     microservices,
     microfrontends,
   });
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const checkAccess = async (req, res) => {
+  const { serviceId, action } = req.body || {};
 
-function buildRoleSummary(role) {
-  return {
-    id: role._id,
-    name: role.name,
-    description: role.description || null,
-    isTemp: role.isTemp,
-    ...(role.isTemp && { validFrom: role.startDate, validUntil: role.endDate }),
-  };
-}
+  if (!serviceId || !action) {
+    return res.status(400).json({
+      error: "Both serviceId and action are required",
+    });
+  }
+
+  const allowed = hasPermission(req.accessProfile, serviceId, action);
+
+  return res.status(200).json({
+    userId: req.accessProfile.userId,
+    required: { serviceId: String(serviceId), action: String(action).toLowerCase() },
+    allowed,
+  });
+};
 
 function buildServicePayload(entry, allowedActions) {
   return {
@@ -128,4 +113,4 @@ function buildServicePayload(entry, allowedActions) {
   };
 }
 
-module.exports = { authorize };
+module.exports = { authorize, checkAccess };
