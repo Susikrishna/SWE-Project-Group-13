@@ -1,24 +1,24 @@
 import Navbar from "../components/Navbar";
 import axios from "axios";
 import { useState, useEffect } from "react";
-
+const serverUrl = import.meta.env.VITE_SERVER_URL
 function Roles() {
     const [roles, setRoles] = useState([]);
     const [error, setError] = useState(null);
-
+    
     const getRoles = async () => {
         try {
-            const response = await axios.get("http://localhost:6969/roles");
+            const response = await axios.get(`${serverUrl}/roles`);
             setRoles(response.data);
         } catch (err) {
             setError("Failed to fetch roles.");
         }
     };
-
+    
     useEffect(() => {
         getRoles();
     }, []);
-
+    
     const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString();
 
     return (

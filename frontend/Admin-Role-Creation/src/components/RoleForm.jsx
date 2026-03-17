@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-
+const serverUrl = import.meta.env.VITE_SERVER_URL
+const registryUrl = import.meta.env.VITE_REGISTRY_URL
 function RoleForm() {
     const [roleName, setRoleName] = useState("");
     const [isTemp, setIsTemp] = useState(false);
@@ -15,7 +16,7 @@ function RoleForm() {
     useEffect(() => {
         const fetchRegistries = async () => {
             try {
-                const response = await axios.get("http://localhost:6970/registry");
+                const response = await axios.get(`${registryUrl}/registry`);
                 const data = response.data.data;
                 console.log(data)
                 console.log(data[0].exposedPermissions)
@@ -125,7 +126,7 @@ function RoleForm() {
         };
         
         try {
-            await axios.post("http://localhost:6969/roles", roleData, {
+            await axios.post(`${serverUrl}/roles`, roleData, {
                 headers: { "Content-Type": "application/json" },
             });
             alert(`Role "${roleName}" created successfully!`);

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-
+const serverUrl = import.meta.env.VITE_REGISTRY_URL
 const RegistryManagement = () => {
   const [formData, setFormData] = useState({
     serviceName: "",
@@ -87,7 +87,7 @@ const RegistryManagement = () => {
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const response = await fetch("http://localhost:6970/registry", {
+      const response = await fetch(`${serverUrl}/registry`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
