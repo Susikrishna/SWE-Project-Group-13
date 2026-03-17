@@ -1,87 +1,40 @@
 const mongoose = require("mongoose");
 
-const permissionSchema = new mongoose.Schema(
-{
-  resource: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true
+// --- 1. API / Microservice Schema ---
+const endpointSchema = new mongoose.Schema({
+  path: { type: String, required: true, trim: true },
+  method: { 
+    type: String, 
+    required: true, 
+    uppercase: true, 
+    enum: ["GET", "POST", "PUT", "PATCH", "DELETE"] 
   },
-  
-  action: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true
-  },
-  
-  description: {
-    type: String,
-    trim: true
-  }
-
+  resource: { type: String, required: true, trim: true, lowercase: true },
+  action: { type: String, required: true, trim: true, lowercase: true }
 }, { _id: false });
 
-
-const registrySchema = new mongoose.Schema({
-
-  serviceName: {
-    type: String,
-    required: true,
-    trim: true
-  },
-
-  serviceIdentifier: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    lowercase: true
-  },
-  
-  description: {
-    type: String,
-    trim: true
-  },
-  
-  serviceType: {
-    type: String,
-    required: true,
-    enum: ["microservice", "microfrontend"]
-  },
-  
-  baseUrl: {
-    type: String,
-    required: true,
-    trim: true,
-    match: /^https?:\/\/.+/
-  },
-  
-  exposedPermissions: {
-    type: [permissionSchema],
-    
-    validate: {
-      validator: function (permissions) {
-        const set = new Set(
-          permissions.map(p => `${p.resource}:${p.action}`)
-        );
-        return set.size === permissions.length;
-      },
-      message: "Duplicate permissions are not allowed"
-    }
-  },
-
-  isActive: {
-    type: Boolean,
-    default: true
-  }
-
+const apiRegistrySchema = new mongoose.Schema({
+  serviceName: { type: String, required: true, trim: true },
+  serviceIdentifier: { type: String, required: true, unique: true, trim: true, lowercase: true },
+  serviceType: { type: String, default: "microservice" },
+  baseUrl: { type: String, required: true, trim: true, match: /^https?:\/\/.+/ },
+  endpoints: { type: [endpointSchema], default: [] },
+  isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
-registrySchema.index({
-  "exposedPermissions.resource": 1,
-  "exposedPermissions.action": 1
-});
+// --- 2. Microfrontend Schema ---
+const mfeRegistrySchema = new mongoose.Schema({
+  serviceName: { type: String, required: true, trim: true },
+  serviceIdentifier: { type: String, required: true, unique: true, trim: true, lowercase: true },
+  serviceType: { type: String, default: "microfrontend" },
+  route: { type: String, required: true, trim: true },
+  remoteUrl: { type: String, required: true, trim: true, match: /^https?:\/\/.+/ },
+  moduleName: { type: String, required: true, trim: true },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
 
-module.exports = mongoose.model("ServiceRegistry", registrySchema);
+// Compile models
+const ApiRegistry = mongoose.model("ApiRegistry", apiRegistrySchema);
+const MfeRegistry = mongoose.model("MfeRegistry", mfeRegistrySchema);
+
+module.exports = { ApiRegistry, MfeRegistry };
