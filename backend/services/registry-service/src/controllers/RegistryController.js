@@ -91,27 +91,46 @@ const createRegistryEntry = async (req, res) => {
   }
 };
 
-const getRegistries = async (req, res) => {
+// --- GET ALL MICROSERVICES ---
+const getApiRegistries = async (req, res) => {
   try {
-    // 1. Fetch from both collections
-    const apis = await ApiRegistry.find().lean();
-    const mfes = await MfeRegistry.find().lean();
-
-    // 2. Merge and sort them (Newest first)
-    let entries = [...apis, ...mfes].sort((a, b) => b.createdAt - a.createdAt);
-
-    // 3. Apply standard pagination to the merged array
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
-    const total = entries.length;
-
     const skip = (page - 1) * limit;
-    entries = entries.slice(skip, skip + limit);
+
+    const entries = await ApiRegistry.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await ApiRegistry.countDocuments();
 
     res.status(200).json({
-      page,
-      limit,
-      total,
+      page, limit, total,
+      totalPages: Math.ceil(total / limit),
+      data: entries,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// --- GET ALL MICROFRONTENDS ---
+const getMfeRegistries = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const entries = await MfeRegistry.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await MfeRegistry.countDocuments();
+
+    res.status(200).json({
+      page, limit, total,
       totalPages: Math.ceil(total / limit),
       data: entries,
     });
@@ -122,5 +141,6 @@ const getRegistries = async (req, res) => {
 
 module.exports = {
   createRegistryEntry,
-  getRegistries,
+  getApiRegistries,
+  getMfeRegistries
 };
