@@ -2,23 +2,37 @@ const Role = require("../models/Role");
 
 const createRole = async (req, res) => {
     try {
-        const { name, description, allowedServices, isTemp, startDate, endDate } = req.body;
+        const { name, description, permissions, mfeAccess, isTemp, expiresAt } = req.body;
 
-        const prev = await Role.findOne({ name: name.trim().toLowerCase() });
+        if (!name) {
+            return res.status(400).json({ error: "Role name is required" });
+        }
+
+        // Generate the custom string ID (e.g., "Support" -> "role_support")
+        const roleId = `role_${name.trim().toLowerCase().replace(/\s+/g, "_")}`;
+
+        // Check if role already exists using the new custom _id
+        const prev = await Role.findById(roleId);
         if (prev) {
             return res.status(409).json({ error: `Role "${name}" already exists` });
         }
 
-        if (allowedServices && !Array.isArray(allowedServices)) {
-            return res.status(400).json({ error: "allowedServices must be an array" });
+        // Validate the new flattened arrays
+        if (permissions && !Array.isArray(permissions)) {
+            return res.status(400).json({ error: "permissions must be an array of strings" });
+        }
+        if (mfeAccess && !Array.isArray(mfeAccess)) {
+            return res.status(400).json({ error: "mfeAccess must be an array of strings" });
         }
 
         const role = await Role.create({
-            name,
+            _id: roleId,
+            name: name.trim(),
             description,
-            allowedServices: allowedServices ?? [],
-            isTemp,
-            ...(isTemp && { startDate, endDate }),
+            permissions: permissions ?? [],
+            mfeAccess: mfeAccess ?? [],
+            isTemp: isTemp ?? false,
+            expiresAt: isTemp ? expiresAt : null,
         });
 
         res.status(201).json(role);

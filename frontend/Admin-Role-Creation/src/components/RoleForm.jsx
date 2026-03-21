@@ -4,44 +4,51 @@ import axios from "axios";
 function RoleForm() {
     const [roleName, setRoleName] = useState("");
     const [isTemp, setIsTemp] = useState(false);
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
+    const [expiresAt, setExpiresAt] = useState("");
+    
     const [microfrontends, setMicrofrontends] = useState([]);
     const [microservices, setMicroservices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [selectedActions, setSelectedActions] = useState({});
     
+    // State for flattened permissions
+    const [selectedPermissions, setSelectedPermissions] = useState(new Set());
+    const [selectedMfes, setSelectedMfes] = useState(new Set());
+
     useEffect(() => {
         const fetchRegistries = async () => {
             try {
-                const response = await axios.get("http://localhost:6970/registry");
-                const data = response.data.data;
-                console.log(data)
-                console.log(data[0].exposedPermissions)
-                const mfes = data
-                    .filter((s) => s.serviceType === "microfrontend" && s.isActive)
-                    .map((s) => ({
-                        _id: s._id,
-                        id: s.serviceIdentifier,
-                        label: s.serviceName,
-                        exposedPermissions: s.exposedPermissions,
-                        description: s.description,
-                        checked: false,
-                    }));
-                const services = data
-                    .filter((s) => s.serviceType === "microservice" && s.isActive)
-                    .map((s) => ({
-                        _id: s._id,
-                        id: s.serviceIdentifier,
-                        label: s.serviceName,
-                        exposedPermissions: s.exposedPermissions,
-                        description: s.description,
-                        checked: false,
-                    }));
-                
+                // Fetch from the updated Registry Service on Port 3001
+                const [mfeRes, svcRes] = await Promise.all([
+                    axios.get("http://localhost:3001/registry/mfes"),
+                    axios.get("http://localhost:3001/registry/services")
+                ]);
+
+                // Map MFEs
+                const mfes = mfeRes.data.map(m => ({
+                    id: m.feature,
+                    label: m.name
+                }));
+
+                // Group API endpoints by service
+                const groupedServices = {};
+                svcRes.data.forEach(api => {
+                    if (!groupedServices[api.service]) {
+                        groupedServices[api.service] = {
+                            id: api.service,
+                            label: api.service.toUpperCase(),
+                            permissions: []
+                        };
+                    }
+                    groupedServices[api.service].permissions.push({
+                        resource: api.resource,
+                        action: api.action,
+                        permissionKey: api.permissionKey
+                    });
+                });
+
                 setMicrofrontends(mfes);
-                setMicroservices(services);
+                setMicroservices(Object.values(groupedServices));
             } catch (err) {
                 setError("Failed to load services. Please try again.");
             } finally {
@@ -51,91 +58,73 @@ function RoleForm() {
 
         fetchRegistries();
     }, []);
-    
-    const toggleService = (type, item) => {
-        const setList = type === "mfe" ? setMicrofrontends : setMicroservices;
-        const isChecked = !item.checked;
-        
-        setList((prev) =>
-            prev.map((s) => s._id === item._id ? { ...s, checked: isChecked } : s)
-        );
-        
-        setSelectedActions((prev) => {
-            const updated = { ...prev };
-            if (isChecked) {
-                updated[item._id] = new Set(
-                    item.exposedPermissions.map((p) => `${p.resource}:${p.action}`)
-                );
-            } else {
-                delete updated[item._id];
-            }
-            return updated;
+
+    // Toggle for Microfrontends
+    const toggleMfe = (mfeId) => {
+        setSelectedMfes(prev => {
+            const next = new Set(prev);
+            if (next.has(mfeId)) next.delete(mfeId);
+            else next.add(mfeId);
+            return next;
         });
     };
 
-    const toggleAction = (serviceId, resource, action, type) => {
-        const setList = type === "mfe" ? setMicrofrontends : setMicroservices;
-        const key = `${resource}:${action}`;
-
-        setSelectedActions((prev) => {
-            const current = new Set(prev[serviceId] || []);
-
-            if (current.has(key)) {
-                current.delete(key);
+    // Toggle all permissions for a Microservice
+    const toggleServiceExpand = (serviceId, permissions) => {
+        const hasAny = permissions.some(p => selectedPermissions.has(p.permissionKey));
+        
+        setSelectedPermissions(prev => {
+            const next = new Set(prev);
+            if (hasAny) {
+                // If currently checked, uncheck all
+                permissions.forEach(p => next.delete(p.permissionKey));
             } else {
-                current.add(key);
+                // If unchecked, check all
+                permissions.forEach(p => next.add(p.permissionKey));
             }
+            return next;
+        });
+    };
 
-            if (current.size === 0) {
-                setList((prevList) =>
-                    prevList.map((s) =>
-                        s._id === serviceId ? { ...s, checked: false } : s
-                    )
-                );
-
-                const updated = { ...prev };
-                delete updated[serviceId];
-                return updated;
-            }
-
-            return { ...prev, [serviceId]: current };
+    // Toggle a specific individual API permission
+    const togglePermission = (permissionKey) => {
+        setSelectedPermissions(prev => {
+            const next = new Set(prev);
+            if (next.has(permissionKey)) next.delete(permissionKey);
+            else next.add(permissionKey);
+            return next;
         });
     };
     
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const allSelected = [...microfrontends, ...microservices].filter((s) => s.checked);
-
-        if (allSelected.length === 0) {
-            alert("Please select at least one service.");
+        if (selectedPermissions.size === 0 && selectedMfes.size === 0) {
+            alert("Please select at least one service or microfrontend.");
             return;
         }
 
-        const allowedServices = allSelected.map((s) => ({
-            serviceId: s._id,
-            actions: Array.from(selectedActions[s._id] || []),
-        }));
-
         const roleData = {
             name: roleName,
-            allowedServices,
+            permissions: Array.from(selectedPermissions),
+            mfeAccess: Array.from(selectedMfes),
             isTemp,
-            ...(isTemp && { startDate, endDate }),
+            ...(isTemp && { expiresAt }),
         };
         
         try {
-            await axios.post("http://localhost:6969/roles", roleData, {
+            // Post to the updated Role Service on Port 3002
+            await axios.post("http://localhost:3002/roles", roleData, {
                 headers: { "Content-Type": "application/json" },
             });
             alert(`Role "${roleName}" created successfully!`);
+            
+            // Reset Form
             setRoleName("");
             setIsTemp(false);
-            setStartDate("");
-            setEndDate("");
-            setSelectedActions({});
-            setMicrofrontends((prev) => prev.map((f) => ({ ...f, checked: false })));
-            setMicroservices((prev) => prev.map((s) => ({ ...s, checked: false })));
+            setExpiresAt("");
+            setSelectedPermissions(new Set());
+            setSelectedMfes(new Set());
         } catch (err) {
             alert(err.response?.data?.error || "Failed to create role.");
         }
@@ -172,43 +161,20 @@ function RoleForm() {
                         <p className="status-text">No microfrontends registered.</p>
                     ) : (
                         <div className="service-list">
-                            {microfrontends.map((item) => (
-                                <div key={item._id} className={`service-card ${item.checked ? "checked" : ""}`}>
-                                    <div
-                                        className="service-header"
-                                        onClick={() => toggleService("mfe", item)}
-                                    >
-                                        <input type="checkbox" checked={item.checked} onChange={() => { }} />
-                                        <span className="service-name">{item.label}</span>
-                                    </div>
-                                    {item.checked && (
-                                        <div className="actions-list">
-                                            <p className="actions-title">Resource List:</p>
-                                            <div className="actions-grid">
-                                                {item.exposedPermissions.map((perm) => {
-                                                    const key = `${perm.resource}:${perm.action}`;
-                                                    const isSelected = selectedActions[item._id]?.has(key);
-                                                    return (
-                                                        <div
-                                                            key={perm.resource}
-                                                            className={`action-chip ${isSelected ? "selected" : ""}`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleAction(item._id, perm.resource,perm.action, "mfe");
-                                                            }}
-                                                        >
-                                                            <input type="checkbox" checked={isSelected} readOnly />
-                                                            <span className="action-name">{perm.resource } : </span>
-                                                            <span className="action-desc">{perm.action}</span>
-                                                            
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                            {microfrontends.map((item) => {
+                                const isChecked = selectedMfes.has(item.id);
+                                return (
+                                    <div key={item.id} className={`service-card ${isChecked ? "checked" : ""}`}>
+                                        <div
+                                            className="service-header"
+                                            onClick={() => toggleMfe(item.id)}
+                                        >
+                                            <input type="checkbox" checked={isChecked} readOnly />
+                                            <span className="service-name">{item.label}</span>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                     
@@ -222,43 +188,44 @@ function RoleForm() {
                         <p className="status-text">No microservices registered.</p>
                     ) : (
                         <div className="service-list">
-                            {microservices.map((item) => (
-                                <div key={item._id} className={`service-card ${item.checked ? "checked" : ""}`}>
-                                    <div
-                                        className="service-header"
-                                        onClick={() => toggleService("service", item)}
-                                    >
-                                        <input type="checkbox" checked={item.checked} onChange={() => { }} />
-                                        <span className="service-name">{item.label}</span>
-                                    </div>
-                                    {item.checked && (
-                                        <div className="actions-list">
-                                            <p className="actions-title">Resource List:</p>
-                                            <div className="actions-grid">
-                                                {item.exposedPermissions.map((perm) => {
-                                                    const key = `${perm.resource}:${perm.action}`;
-                                                    const isSelected = selectedActions[item._id]?.has(key);
-                                                    return (
-                                                        <div
-                                                            key={perm.resource}
-                                                            className={`action-chip ${isSelected ? "selected" : ""}`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleAction(item._id, perm.resource,perm.action, "service");
-                                                            }}
-                                                        >
-                                                            <input type="checkbox" checked={isSelected} readOnly />
-                                                            <span className="action-name">{perm.resource} : </span>
-                                                            <span className="action-desc">{perm.action}</span>
-
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
+                            {microservices.map((item) => {
+                                const hasAny = item.permissions.some(p => selectedPermissions.has(p.permissionKey));
+                                return (
+                                    <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
+                                        <div
+                                            className="service-header"
+                                            onClick={() => toggleServiceExpand(item.id, item.permissions)}
+                                        >
+                                            <input type="checkbox" checked={hasAny} readOnly />
+                                            <span className="service-name">{item.label}</span>
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                        {hasAny && (
+                                            <div className="actions-list">
+                                                <p className="actions-title">Resource List:</p>
+                                                <div className="actions-grid">
+                                                    {item.permissions.map((perm) => {
+                                                        const isSelected = selectedPermissions.has(perm.permissionKey);
+                                                        return (
+                                                            <div
+                                                                key={perm.permissionKey}
+                                                                className={`action-chip ${isSelected ? "selected" : ""}`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    togglePermission(perm.permissionKey);
+                                                                }}
+                                                            >
+                                                                <input type="checkbox" checked={isSelected} readOnly />
+                                                                <span className="action-name">{perm.resource} :&nbsp;</span>
+                                                                <span className="action-desc">{perm.action}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
 
@@ -269,28 +236,18 @@ function RoleForm() {
                         className={`permission-item ${isTemp ? "checked" : ""}`}
                         style={{ marginBottom: "10px" }}
                     >
-                        <input type="checkbox" checked={isTemp} onChange={() => { }} />
+                        <input type="checkbox" checked={isTemp} readOnly />
                         <label>Is the Role Temporary?</label>
                     </div>
 
                     {isTemp && (
                         <div className="date-range">
                             <div className="form-group">
-                                <label>Start Date</label>
+                                <label>Expiration Date</label>
                                 <input
                                     type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    required={isTemp}
-                                />
-                            </div>
-                            <div className="form-group">
-                                <label>End Date</label>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    min={startDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
+                                    value={expiresAt}
+                                    onChange={(e) => setExpiresAt(e.target.value)}
                                     required={isTemp}
                                 />
                             </div>

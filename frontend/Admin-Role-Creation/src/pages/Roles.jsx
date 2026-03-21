@@ -8,7 +8,7 @@ function Roles() {
 
     const getRoles = async () => {
         try {
-            const response = await axios.get("http://localhost:6969/roles");
+            const response = await axios.get("http://localhost:3002/roles");
             setRoles(response.data);
         } catch (err) {
             setError("Failed to fetch roles.");
@@ -40,40 +40,46 @@ function Roles() {
                     {roles.map((role) => (
                         <div key={role._id} className="role-card">
                             <div className="role-card-header">
-                                <span className="role-name">{role.name}</span>
-                                {role.isTemp && <span className="badge badge-temp">Temporary</span>}
+                                <span className="role-name">{role.name}</span> 
+                                {role.isTemp && <span className="badge badge-temp">Temporary</span>} 
                             </div>
                             
                             {role.description && (
                                 <div className="role-description">{role.description}</div>
                             )}
 
-                            {role.isTemp && role.startDate && role.endDate && (
+                            {role.isTemp && role.expiresAt && (
                                 <div className="role-dates">
-                                    <span>📅 {formatDate(role.startDate)}</span>
-                                    <span className="date-arrow">→</span>
-                                    <span>{formatDate(role.endDate)}</span>
+                                    <span>📅 Expires: {formatDate(role.expiresAt)}</span> 
                                 </div>
                             )}
 
+                            {/* Section for API Permissions (Linear Format) */}
                             <div className="role-section">
-                                <div className="section-label">Allowed Services</div>
-                                {role.allowedServices.length > 0 ? (
-                                    role.allowedServices.map((svc, idx) => (
-                                        <div key={idx} className="service-block">
-                                            {/* <div className="service-id">
-                                                {svc.serviceId?.serviceIdentifier || svc.serviceId?.serviceName || svc.serviceId}
-                                            </div> */}
-                                            <div className="tag-list">
-                                                {svc.actions.map((action) => (
-                                                    <span key={action} className="tag tag-green">{action}</span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <span className="empty-tag">No services assigned</span>
-                                )}
+                                <div className="section-label">API Permissions</div>
+                                <div className="tag-list">
+                                    {role.permissions && role.permissions.length > 0 ? (
+                                        role.permissions.map((perm) => (
+                                            <span key={perm} className="tag tag-green">{perm}</span>
+                                        ))
+                                    ) : (
+                                        <span className="empty-tag">No API permissions assigned</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Section for Microfrontend Access */}
+                            <div className="role-section">
+                                <div className="section-label">MFE Access</div>
+                                <div className="tag-list">
+                                    {role.mfeAccess && role.mfeAccess.length > 0 ? (
+                                        role.mfeAccess.map((mfe) => (
+                                            <span key={mfe} className="tag tag-purple">{mfe}</span> 
+                                        ))
+                                    ) : (
+                                        <span className="empty-tag">No MFE access assigned</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     ))}

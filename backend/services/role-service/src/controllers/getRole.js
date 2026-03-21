@@ -11,6 +11,7 @@ const getRoles = async (req, res) => {
 
 const getRoleById = async (req, res) => {
     try {
+        // req.params.id will perfectly match the string ID (e.g., 'role_support')
         const role = await Role.findById(req.params.id);
         if (!role) {
             return res.status(404).json({ error: "Role not found" });
@@ -21,5 +22,4 @@ const getRoleById = async (req, res) => {
     }
 };
 
-
-module.exports = {getRoles, getRoleById}
+module.exports = { getRoles, getRoleById };
