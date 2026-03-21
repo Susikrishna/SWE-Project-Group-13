@@ -26,8 +26,8 @@ const MicrofrontendForm = ({ formData, handleInputChange }) => {
 
       <label style={styles.label}>Module Name</label>
       <input 
-        name="moduleName" 
-        value={formData.moduleName} 
+        name="module" 
+        value={formData.module} 
         onChange={handleInputChange} 
         placeholder="e.g. AdminDashboard" 
         style={styles.input} 

@@ -6,16 +6,14 @@ import MicroserviceForm from "./MicroserviceForm";
 
 const RegistryManagement = () => {
   const initialState = {
-    serviceName: "",
-    serviceIdentifier: "",
+    serviceName: "", 
     serviceType: "microservice",
-    baseUrl: "",
     // Microfrontend Specific
     route: "",
     remoteUrl: "",
-    moduleName: "",
+    module: "",
     // Microservice Specific
-    endpoints: [{ path: "", method: "GET", resource: "", action: "read" }],
+    endpoints: [{ path: "", method: "GET", resource: "", action: "read", isPublic: false }],
   };
 
   const [formData, setFormData] = useState(initialState);
@@ -23,15 +21,12 @@ const RegistryManagement = () => {
   const [successData, setSuccessData] = useState(null);
   const [failureMessage, setFailureMessage] = useState(null);
 
+  // Utility to auto-generate the identifier slug from the service name
   const slugify = (text) => text.toLowerCase().replace(/\s+/g, "-").replace(/[^\w\-]+/g, "");
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (name === "serviceName") {
-      setFormData({ ...formData, serviceName: value, serviceIdentifier: slugify(value) });
-    } else {
-      setFormData({ ...formData, [name]: value });
-    }
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleEndpointChange = (index, field, value) => {
@@ -41,12 +36,12 @@ const RegistryManagement = () => {
   };
 
   const addEndpoint = () => {
-    setFormData({ ...formData, endpoints: [...formData.endpoints, { path: "", method: "GET", resource: "", action: "read" }] });
+    setFormData({ ...formData, endpoints: [...formData.endpoints, { path: "", method: "GET", resource: "", action: "read", isPublic: false }] });
   };
 
   const removeEndpoint = (index) => {
     const updated = formData.endpoints.filter((_, i) => i !== index);
-    setFormData({ ...formData, endpoints: updated.length > 0 ? updated : [{ path: "", method: "GET", resource: "", action: "read" }] });
+    setFormData({ ...formData, endpoints: updated.length > 0 ? updated : [{ path: "", method: "GET", resource: "", action: "read", isPublic: false }] });
   };
 
   const handleSubmit = async (e) => {
@@ -55,26 +50,40 @@ const RegistryManagement = () => {
     setFailureMessage(null);
     const startTime = Date.now();
 
-    // Clean up payload before sending to backend
-    const payload = { ...formData };
-    if (payload.serviceType === "microservice") {
-      delete payload.route; 
-      delete payload.remoteUrl; 
-      delete payload.moduleName; 
-      payload.endpoints = payload.endpoints.filter((ep) => ep.path !== "" && ep.resource !== "");
+    let targetUrl = "";
+    let finalPayload = {};
+    
+    // Auto-generate the unique identifier slug in the background
+    const generatedIdentifier = slugify(formData.serviceName);
+
+    if (formData.serviceType === "microservice") {
+      // UPDATED URL: Removed /api prefix
+      targetUrl = "http://localhost:3001/registry/services/bulk";
+      finalPayload = {
+        service: generatedIdentifier, 
+        apis: formData.endpoints.filter((ep) => ep.path !== "" && ep.resource !== "")
+      };
     } else {
-      delete payload.baseUrl; // Removed because MFEs don't use a Base URL
-      delete payload.endpoints;
+      // UPDATED URL: Removed /api prefix
+      targetUrl = "http://localhost:3001/registry/mfes";
+      finalPayload = {
+        // UPDATED: Changed from featureId to feature to match MFE DB schema
+        feature: generatedIdentifier, 
+        name: formData.serviceName,
+        route: formData.route,
+        remoteUrl: formData.remoteUrl,
+        module: formData.module
+      };
     }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const response = await fetch("http://localhost:3001/registry", {
+      const response = await fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(finalPayload),
         signal: controller.signal,
       });
 
@@ -113,30 +122,24 @@ const RegistryManagement = () => {
         <p style={styles.subHeading}>Register your microservices and microfrontends</p>
 
         <form onSubmit={handleSubmit}>
-          <label style={styles.label}>Service Name</label>
-          <input name="serviceName" value={formData.serviceName} onChange={handleInputChange} placeholder="e.g. College Management Service" style={styles.input} required />
-
-          <label style={styles.label}>Service Identifier</label>
-          <input name="serviceIdentifier" value={formData.serviceIdentifier} onChange={handleInputChange} placeholder="e.g. college-service" style={styles.input} required />
+          <label style={styles.label}>Service / Feature Name</label>
+          <input name="serviceName" value={formData.serviceName} onChange={handleInputChange} placeholder="e.g. Settings Page" style={styles.input} required />
 
           <label style={styles.label}>Service Type</label>
           <select name="serviceType" value={formData.serviceType} onChange={handleInputChange} style={styles.dropdown}>
-            <option value="microservice">Microservice</option>
-            <option value="microfrontend">Microfrontend</option>
+            <option value="microservice">Microservice (API Endpoints)</option>
+            <option value="microfrontend">Microfrontend (React App)</option>
           </select>
 
-          {/* Render API specific fields only if Microservice is selected */}
           {formData.serviceType === "microservice" && (
             <MicroserviceForm 
               formData={formData} 
-              handleInputChange={handleInputChange}
               handleEndpointChange={handleEndpointChange} 
               addEndpoint={addEndpoint} 
               removeEndpoint={removeEndpoint} 
             />
           )}
 
-          {/* Render MFE specific fields only if Microfrontend is selected */}
           {formData.serviceType === "microfrontend" && (
             <MicrofrontendForm formData={formData} handleInputChange={handleInputChange} />
           )}
