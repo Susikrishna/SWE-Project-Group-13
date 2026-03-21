@@ -1,37 +1,27 @@
-const mongoose = require("mongoose");
+/**
+ * utils/accessProfile.js
+ * Contains pure functions to handle Role parsing and flattening.
+ */
 
 function extractRoleIdsFromPayload(tokenPayload = {}) {
     const roleIds = [];
-
-    if (tokenPayload.roleId) {
-        roleIds.push(tokenPayload.roleId);
-    }
-
-    if (Array.isArray(tokenPayload.roleIds)) {
-        roleIds.push(...tokenPayload.roleIds);
-    }
-
+    if (tokenPayload.roleId) roleIds.push(tokenPayload.roleId);
+    if (Array.isArray(tokenPayload.roleIds)) roleIds.push(...tokenPayload.roleIds);
     return [...new Set(roleIds.map(String))];
 }
 
 function validateRoleIds(roleIds) {
-    return roleIds.every((id) => mongoose.Types.ObjectId.isValid(id));
+    // Role IDs are now custom strings (e.g., 'role_admin'), not ObjectIds
+    return roleIds.every((id) => typeof id === "string" && id.trim() !== "");
 }
 
 function isTempRoleCurrentlyValid(role) {
-    if (!role.isTemp) {
-        return true;
-    }
-
-    const now = new Date();
-    const start = role.startDate ? new Date(role.startDate) : null;
-    const end = role.endDate ? new Date(role.endDate) : null;
-
-    if (!start || !end) {
-        return false;
-    }
-
-    return now >= start && now <= end;
+    if (!role.isTemp) return true;
+    
+    // Check against the flattened schema's single expiresAt date
+    if (!role.expiresAt) return false;
+    
+    return new Date() <= new Date(role.expiresAt);
 }
 
 function buildRoleSummary(role) {
@@ -40,44 +30,33 @@ function buildRoleSummary(role) {
         name: role.name,
         description: role.description || null,
         isTemp: role.isTemp,
-        ...(role.isTemp && { validFrom: role.startDate, validUntil: role.endDate }),
+        ...(role.isTemp && { expiresAt: role.expiresAt }),
     };
 }
 
 function mergeAllowedServices(roles) {
-    const permissionMap = new Map();
+    // Use Sets to automatically deduplicate permissions across multiple roles
+    const permissionSet = new Set();
+    const mfeSet = new Set();
 
     for (const role of roles) {
-        for (const allowed of role.allowedServices || []) {
-            const serviceId = String(allowed.serviceId);
-            if (!permissionMap.has(serviceId)) {
-                permissionMap.set(serviceId, new Set());
-            }
-
-            for (const action of allowed.actions || []) {
-                permissionMap.get(serviceId).add(String(action).trim().toLowerCase());
-            }
-        }
+        // Flatten API permissions (e.g., "user-svc:profile:read")
+        (role.permissions || []).forEach(perm => permissionSet.add(perm.toLowerCase()));
+        
+        // Flatten UI access slugs (e.g., "set-ui")
+        (role.mfeAccess || []).forEach(mfe => mfeSet.add(mfe.toLowerCase()));
     }
 
-    const mergedAllowedServices = [];
-    const permissionsByService = {};
-
-    for (const [serviceId, actionSet] of permissionMap.entries()) {
-        const actions = [...actionSet];
-        mergedAllowedServices.push({ serviceId, actions });
-        permissionsByService[serviceId] = actions;
-    }
-
-    return { mergedAllowedServices, permissionsByService };
+    return { 
+        mergedPermissions: Array.from(permissionSet), 
+        mergedMfes: Array.from(mfeSet) 
+    };
 }
 
-function hasPermission(accessProfile, serviceId, action) {
-    const normalizedServiceId = String(serviceId);
-    const normalizedAction = String(action).trim().toLowerCase();
-
-    const actions = accessProfile.permissionsByService[normalizedServiceId] || [];
-    return actions.includes(normalizedAction);
+function hasPermission(accessProfile, permissionKey) {
+    // O(1) instant lookup check against the flattened array
+    const normalizedKey = String(permissionKey).trim().toLowerCase();
+    return accessProfile.mergedPermissions.includes(normalizedKey);
 }
 
 module.exports = {
