@@ -5,16 +5,17 @@ const ApiRegistry = require("../models/apiRegistry.model");
  */
 const createApi = async (req, res) => {
   try {
-    let { service, path, method, resource, action, isPublic } = req.body;
+    let { service, basePath, route, method, description, resource, action, isPublic, isActive } = req.body;
 
-    if (!service || !path || !method || !resource || !action) {
+    if (!service || !basePath || !route || !method || !resource || !action) {
       return res.status(400).json({ error: "Missing required API fields" });
     }
 
     // Normalize data to prevent case-sensitivity mismatches in RBAC checks
     service = service.trim().toLowerCase();
-    path = path.trim();
-    method = method.toUpperCase();
+    basePath = basePath.trim();
+    route = route.trim();
+    method = method.trim().toUpperCase();
     resource = resource.trim().toLowerCase();
     action = action.trim().toLowerCase();
 
@@ -23,12 +24,15 @@ const createApi = async (req, res) => {
 
     const api = await ApiRegistry.create({
       service,
-      path,
+      basePath,
+      route,
       method,
+      description: description?.trim(),
       resource,
       action,
       permissionKey,
       isPublic: isPublic ?? false,
+      isActive: isActive ?? true, // Defaults to true if not provided
     });
 
     res.status(201).json(api);
@@ -46,7 +50,8 @@ const createApi = async (req, res) => {
  */
 const createBulkApis = async (req, res) => {
   try {
-    const { service, apis } = req.body;
+    // basePath can be provided once for the whole service, or inside each API object
+    const { service, basePath, apis } = req.body; 
 
     if (!service || !Array.isArray(apis) || apis.length === 0) {
       return res.status(400).json({ error: "Service identifier and an array of APIs are required" });
@@ -55,19 +60,23 @@ const createBulkApis = async (req, res) => {
     const normalizedService = service.trim().toLowerCase();
 
     const documents = apis
-      .filter(api => api.path && api.method && api.resource && api.action)
+      // Ensure we have a basePath (either from the top level or the api item)
+      .filter(api => (api.basePath || basePath) && api.route && api.method && api.resource && api.action)
       .map(api => {
         const resource = api.resource.trim().toLowerCase();
         const action = api.action.trim().toLowerCase();
 
         return {
           service: normalizedService,
-          path: api.path.trim(),
-          method: api.method.toUpperCase(),
+          basePath: (api.basePath || basePath).trim(),
+          route: api.route.trim(),
+          method: api.method.trim().toUpperCase(),
+          description: api.description?.trim(),
           resource,
           action,
           permissionKey: `${normalizedService}:${resource}:${action}`,
           isPublic: api.isPublic ?? false,
+          isActive: api.isActive ?? true,
         };
       });
 
@@ -75,7 +84,7 @@ const createBulkApis = async (req, res) => {
       return res.status(400).json({ error: "No valid API configurations provided" });
     }
 
-    // ordered: false ensures the DB skips existing paths and inserts the rest
+    // ordered: false ensures the DB skips existing routes and inserts the rest without crashing
     const result = await ApiRegistry.insertMany(documents, { ordered: false });
 
     res.status(201).json({

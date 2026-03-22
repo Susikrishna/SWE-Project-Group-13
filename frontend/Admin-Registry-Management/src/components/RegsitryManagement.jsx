@@ -5,15 +5,21 @@ import MicrofrontendForm from "./MicrofrontendForm";
 import MicroserviceForm from "./MicroserviceForm";
 
 const RegistryManagement = () => {
+  // 1. Updated Initial State
+  const emptyEndpoint = { route: "", method: "GET", description: "", resource: "", action: "read", isPublic: false, isActive: true };
+
   const initialState = {
     serviceName: "", 
+    description: "", 
     serviceType: "microservice",
+    isActive: true,
     // Microfrontend Specific
     route: "",
     remoteUrl: "",
     module: "",
     // Microservice Specific
-    endpoints: [{ path: "", method: "GET", resource: "", action: "read", isPublic: false }],
+    basePath: "", 
+    endpoints: [{ ...emptyEndpoint }],
   };
 
   const [formData, setFormData] = useState(initialState);
@@ -21,7 +27,6 @@ const RegistryManagement = () => {
   const [successData, setSuccessData] = useState(null);
   const [failureMessage, setFailureMessage] = useState(null);
 
-  // Utility to auto-generate the identifier slug from the service name
   const slugify = (text) => text.toLowerCase().replace(/\s+/g, "-").replace(/[^\w\-]+/g, "");
 
   const handleInputChange = (e) => {
@@ -36,12 +41,12 @@ const RegistryManagement = () => {
   };
 
   const addEndpoint = () => {
-    setFormData({ ...formData, endpoints: [...formData.endpoints, { path: "", method: "GET", resource: "", action: "read", isPublic: false }] });
+    setFormData({ ...formData, endpoints: [...formData.endpoints, { ...emptyEndpoint }] });
   };
 
   const removeEndpoint = (index) => {
     const updated = formData.endpoints.filter((_, i) => i !== index);
-    setFormData({ ...formData, endpoints: updated.length > 0 ? updated : [{ path: "", method: "GET", resource: "", action: "read", isPublic: false }] });
+    setFormData({ ...formData, endpoints: updated.length > 0 ? updated : [{ ...emptyEndpoint }] });
   };
 
   const handleSubmit = async (e) => {
@@ -53,26 +58,27 @@ const RegistryManagement = () => {
     let targetUrl = "";
     let finalPayload = {};
     
-    // Auto-generate the unique identifier slug in the background
     const generatedIdentifier = slugify(formData.serviceName);
 
+    // 2. Updated Payload generation
     if (formData.serviceType === "microservice") {
-      // UPDATED URL: Removed /api prefix
       targetUrl = "http://localhost:3001/registry/services/bulk";
       finalPayload = {
         service: generatedIdentifier, 
-        apis: formData.endpoints.filter((ep) => ep.path !== "" && ep.resource !== "")
+        basePath: formData.basePath,
+        // Filter out empty endpoints using 'route' instead of 'path'
+        apis: formData.endpoints.filter((ep) => ep.route !== "" && ep.resource !== "")
       };
     } else {
-      // UPDATED URL: Removed /api prefix
       targetUrl = "http://localhost:3001/registry/mfes";
       finalPayload = {
-        // UPDATED: Changed from featureId to feature to match MFE DB schema
         feature: generatedIdentifier, 
         name: formData.serviceName,
+        description: formData.description,
         route: formData.route,
         remoteUrl: formData.remoteUrl,
-        module: formData.module
+        module: formData.module,
+        isActive: formData.isActive
       };
     }
 
@@ -126,7 +132,7 @@ const RegistryManagement = () => {
           <input name="serviceName" value={formData.serviceName} onChange={handleInputChange} placeholder="e.g. Settings Page" style={styles.input} required />
 
           <label style={styles.label}>Service Type</label>
-          <select name="serviceType" value={formData.serviceType} onChange={handleInputChange} style={styles.dropdown}>
+          <select name="serviceType" value={formData.serviceType} onChange={handleInputChange} style={{...styles.dropdown, marginBottom: '20px'}}>
             <option value="microservice">Microservice (API Endpoints)</option>
             <option value="microfrontend">Microfrontend (React App)</option>
           </select>
@@ -134,6 +140,7 @@ const RegistryManagement = () => {
           {formData.serviceType === "microservice" && (
             <MicroserviceForm 
               formData={formData} 
+              handleInputChange={handleInputChange}
               handleEndpointChange={handleEndpointChange} 
               addEndpoint={addEndpoint} 
               removeEndpoint={removeEndpoint} 
@@ -144,7 +151,7 @@ const RegistryManagement = () => {
             <MicrofrontendForm formData={formData} handleInputChange={handleInputChange} />
           )}
 
-          <button style={styles.button}>Register Service</button>
+          <button style={{...styles.button, marginTop: '20px'}}>Register Service</button>
         </form>
       </div>
     </div>

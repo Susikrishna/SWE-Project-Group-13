@@ -5,8 +5,7 @@ const MfeRegistry = require("../models/mfeRegistry.model");
  */
 const createMfe = async (req, res) => {
   try {
-    // Destructure 'feature' instead of 'featureId'
-    let { feature, name, route, remoteUrl, module } = req.body;
+    let { feature, name, description, route, remoteUrl, module, isActive } = req.body;
 
     // Validate that all required fields are present
     if (!feature || !name || !route || !remoteUrl || !module) {
@@ -19,10 +18,12 @@ const createMfe = async (req, res) => {
     // Create the MFE record in the database
     const mfe = await MfeRegistry.create({
       feature,
-      name,
-      route,
-      remoteUrl,
-      module,
+      name: name.trim(),
+      description: description?.trim(),
+      route: route.trim(),
+      remoteUrl: remoteUrl.trim(),
+      module: module.trim(),
+      isActive: isActive ?? true,
     });
 
     res.status(201).json(mfe);
