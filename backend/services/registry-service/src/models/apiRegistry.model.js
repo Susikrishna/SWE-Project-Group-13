@@ -37,6 +37,6 @@ const apiSchema = new mongoose.Schema(
 apiSchema.index({ service: 1, basePath: 1, route: 1, method: 1 }, { unique: true });
 
 // Extremely fast lookups when verifying a user's permission token
-apiSchema.index({ permissionKey: 1 }, { unique: true });
+apiSchema.index({ permissionKey: 1 });
 
 module.exports = mongoose.model("ApiRegistry", apiSchema);
