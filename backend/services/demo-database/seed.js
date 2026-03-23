@@ -1,319 +1,217 @@
 /**
- * MongoDB Seed Data
+ * Modern Flattened RBAC Database Seed Script
  * Run with: mongosh <your-db-name> seed.js
- * Or import via: mongoimport / MongoDB Compass
  */
 
-// ─── ObjectIds for cross-referencing ────────────────────────────────────────
+// ─── 1. Clean Database ──────────────────────────────────────────────────────
+db.apiregistries.deleteMany({});
+db.mferegistries.deleteMany({});
+db.roles.deleteMany({});
 
-const ids = {
-  authSvc:      ObjectId("6650000000000000000000a1"),
-  userSvc:      ObjectId("6650000000000000000000a2"),
-  bilingSvc:    ObjectId("6650000000000000000000a3"),
-  notifSvc:     ObjectId("6650000000000000000000a4"),
-  reportSvc:    ObjectId("6650000000000000000000a5"),
-  dashboardMfe: ObjectId("6650000000000000000000a6"),
-  adminMfe:     ObjectId("6650000000000000000000a7"),
-  analyticsMfe: ObjectId("6650000000000000000000a8"),
-};
+// ─── 2. Seed API Registry (Microservices) ───────────────────────────────────
+// Base URLs are omitted here as they are managed by the API Gateway configuration.
+db.apiregistries.insertMany([
+  // Auth Service
+  { service: "auth-service", resource: "session", action: "create", permissionKey: "auth-service:session:create", isActive: true },
+  { service: "auth-service", resource: "session", action: "revoke", permissionKey: "auth-service:session:revoke", isActive: true },
+  { service: "auth-service", resource: "token", action: "refresh", permissionKey: "auth-service:token:refresh", isActive: true },
+  { service: "auth-service", resource: "mfa", action: "enable", permissionKey: "auth-service:mfa:enable", isActive: true },
+  { service: "auth-service", resource: "mfa", action: "disable", permissionKey: "auth-service:mfa:disable", isActive: true },
 
-// ─── ServiceRegistry (8 documents) ──────────────────────────────────────────
+  // User Service
+  { service: "user-service", resource: "user", action: "read", permissionKey: "user-service:user:read", isActive: true },
+  { service: "user-service", resource: "user", action: "create", permissionKey: "user-service:user:create", isActive: true },
+  { service: "user-service", resource: "user", action: "update", permissionKey: "user-service:user:update", isActive: true },
+  { service: "user-service", resource: "user", action: "delete", permissionKey: "user-service:user:delete", isActive: true },
+  { service: "user-service", resource: "user", action: "list", permissionKey: "user-service:user:list", isActive: true },
 
-db.serviceregistries.insertMany([
-  {
-    _id: ids.authSvc,
-    serviceName: "Auth Service",
-    serviceIdentifier: "auth-service",
-    description: "Handles authentication, token issuance, and session management.",
-    serviceType: "microservice",
-    baseUrl: "https://auth.internal.example.com",
-    exposedPermissions: [
-      { resource: "session",  action: "create",  description: "Issue a new login session" },
-      { resource: "session",  action: "revoke",  description: "Revoke an active session" },
-      { resource: "token",    action: "refresh", description: "Refresh an access token" },
-      { resource: "mfa",      action: "enable",  description: "Enable multi-factor authentication" },
-      { resource: "mfa",      action: "disable", description: "Disable multi-factor authentication" },
-    ],
-    isActive: true,
-    createdAt: new Date("2024-01-10T08:00:00Z"),
-    updatedAt: new Date("2024-01-10T08:00:00Z"),
-  },
-  {
-    _id: ids.userSvc,
-    serviceName: "User Service",
-    serviceIdentifier: "user-service",
-    description: "Manages user profiles, preferences, and account lifecycle.",
-    serviceType: "microservice",
-    baseUrl: "https://users.internal.example.com",
-    exposedPermissions: [
-      { resource: "user", action: "read",   description: "Read any user profile" },
-      { resource: "user", action: "create", description: "Create a new user account" },
-      { resource: "user", action: "update", description: "Update user profile details" },
-      { resource: "user", action: "delete", description: "Delete a user account" },
-      { resource: "user", action: "list",   description: "List all users with filters" },
-    ],
-    isActive: true,
-    createdAt: new Date("2024-01-11T09:00:00Z"),
-    updatedAt: new Date("2024-05-01T12:00:00Z"),
-  },
-  {
-    _id: ids.bilingSvc,
-    serviceName: "Billing Service",
-    serviceIdentifier: "billing-service",
-    description: "Handles subscriptions, invoices, and payment processing.",
-    serviceType: "microservice",
-    baseUrl: "https://billing.internal.example.com",
-    exposedPermissions: [
-      { resource: "invoice",      action: "read",   description: "View invoices" },
-      { resource: "invoice",      action: "create", description: "Generate a new invoice" },
-      { resource: "subscription", action: "read",   description: "View subscription details" },
-      { resource: "subscription", action: "update", description: "Change subscription plan" },
-      { resource: "subscription", action: "cancel", description: "Cancel an active subscription" },
-      { resource: "payment",      action: "refund", description: "Issue a payment refund" },
-    ],
-    isActive: true,
-    createdAt: new Date("2024-01-15T10:00:00Z"),
-    updatedAt: new Date("2024-01-15T10:00:00Z"),
-  },
-  {
-    _id: ids.notifSvc,
-    serviceName: "Notification Service",
-    serviceIdentifier: "notification-service",
-    description: "Sends email, SMS, and push notifications to users.",
-    serviceType: "microservice",
-    baseUrl: "https://notify.internal.example.com",
-    exposedPermissions: [
-      { resource: "email",        action: "send",     description: "Send an email notification" },
-      { resource: "sms",          action: "send",     description: "Send an SMS notification" },
-      { resource: "notification", action: "read",     description: "View notification history" },
-      { resource: "template",     action: "manage",   description: "Create and edit notification templates" },
-    ],
-    isActive: true,
-    createdAt: new Date("2024-02-01T11:00:00Z"),
-    updatedAt: new Date("2024-02-01T11:00:00Z"),
-  },
-  {
-    _id: ids.reportSvc,
-    serviceName: "Report Service",
-    serviceIdentifier: "report-service",
-    description: "Generates and exports business reports and data exports.",
-    serviceType: "microservice",
-    baseUrl: "https://reports.internal.example.com",
-    exposedPermissions: [
-      { resource: "report", action: "read",     description: "View generated reports" },
-      { resource: "report", action: "generate", description: "Trigger report generation" },
-      { resource: "report", action: "export",   description: "Export report as PDF/CSV" },
-      { resource: "report", action: "schedule", description: "Schedule recurring reports" },
-    ],
-    isActive: false,  // decommissioned — useful to have an inactive service in seed
-    createdAt: new Date("2024-03-01T08:00:00Z"),
-    updatedAt: new Date("2024-08-20T16:00:00Z"),
-  },
-  {
-    _id: ids.dashboardMfe,
-    serviceName: "Dashboard App",
-    serviceIdentifier: "dashboard-mfe",
-    description: "Main user-facing dashboard microfrontend.",
-    serviceType: "microfrontend",
-    baseUrl: "https://app.example.com/dashboard",
-    exposedPermissions: [
-      { resource: "dashboard", action: "view",      description: "Access the main dashboard" },
-      { resource: "widget",    action: "customize", description: "Add or rearrange dashboard widgets" },
-    ],
-    isActive: true,
-    createdAt: new Date("2024-03-15T09:00:00Z"),
-    updatedAt: new Date("2024-03-15T09:00:00Z"),
-  },
-  {
-    _id: ids.adminMfe,
-    serviceName: "Admin Panel",
-    serviceIdentifier: "admin-mfe",
-    description: "Internal admin interface for managing users and configuration.",
-    serviceType: "microfrontend",
-    baseUrl: "https://admin.example.com",
-    exposedPermissions: [
-      { resource: "admin-panel", action: "access",          description: "Log into the admin panel" },
-      { resource: "config",      action: "read",            description: "View system configuration" },
-      { resource: "config",      action: "update",          description: "Modify system configuration" },
-      { resource: "audit-log",   action: "read",            description: "Read audit logs" },
-    ],
-    isActive: true,
-    createdAt: new Date("2024-04-01T10:00:00Z"),
-    updatedAt: new Date("2024-04-01T10:00:00Z"),
-  },
-  {
-    _id: ids.analyticsMfe,
-    serviceName: "Analytics Dashboard",
-    serviceIdentifier: "analytics-mfe",
-    description: "Business intelligence and analytics microfrontend.",
-    serviceType: "microfrontend",
-    baseUrl: "https://app.example.com/analytics",
-    exposedPermissions: [
-      { resource: "analytics", action: "view",   description: "View analytics charts and KPIs" },
-      { resource: "analytics", action: "export", description: "Export analytics data" },
-      { resource: "funnel",    action: "build",  description: "Build custom conversion funnels" },
-    ],
-    isActive: true,
-    createdAt: new Date("2024-05-10T08:30:00Z"),
-    updatedAt: new Date("2024-05-10T08:30:00Z"),
-  },
+  // Billing Service
+  { service: "billing-service", resource: "invoice", action: "read", permissionKey: "billing-service:invoice:read", isActive: true },
+  { service: "billing-service", resource: "invoice", action: "create", permissionKey: "billing-service:invoice:create", isActive: true },
+  { service: "billing-service", resource: "subscription", action: "read", permissionKey: "billing-service:subscription:read", isActive: true },
+  { service: "billing-service", resource: "subscription", action: "update", permissionKey: "billing-service:subscription:update", isActive: true },
+  { service: "billing-service", resource: "subscription", action: "cancel", permissionKey: "billing-service:subscription:cancel", isActive: true },
+  { service: "billing-service", resource: "payment", action: "refund", permissionKey: "billing-service:payment:refund", isActive: true },
+
+  // Notification Service
+  { service: "notification-service", resource: "email", action: "send", permissionKey: "notification-service:email:send", isActive: true },
+  { service: "notification-service", resource: "sms", action: "send", permissionKey: "notification-service:sms:send", isActive: true },
+  { service: "notification-service", resource: "notification", action: "read", permissionKey: "notification-service:notification:read", isActive: true },
+  { service: "notification-service", resource: "template", action: "manage", permissionKey: "notification-service:template:manage", isActive: true },
+
+  // Report Service (Decommissioned)
+  { service: "report-service", resource: "report", action: "read", permissionKey: "report-service:report:read", isActive: false },
+  { service: "report-service", resource: "report", action: "generate", permissionKey: "report-service:report:generate", isActive: false },
+  { service: "report-service", resource: "report", action: "export", permissionKey: "report-service:report:export", isActive: false },
+  { service: "report-service", resource: "report", action: "schedule", permissionKey: "report-service:report:schedule", isActive: false }
 ]);
+print("✓ Inserted API Registry documents");
 
-print("✓ Inserted 8 ServiceRegistry documents");
-
-// ─── Roles (10 documents) ────────────────────────────────────────────────────
-
-db.roles.insertMany([
-  // 1. Super Admin — full access everywhere
+// ─── 3. Seed MFE Registry (Microfrontends) ──────────────────────────────────
+db.mferegistries.insertMany([
   {
+    name: "Dashboard App",
+    feature: "dashboard-mfe",
+    route: "/dashboard",
+    remoteUrl: "https://app.example.com/dashboard/remoteEntry.js",
+    module: "./DashboardApp",
+    description: "Main user-facing dashboard microfrontend."
+  },
+  {
+    name: "Admin Panel",
+    feature: "admin-mfe",
+    route: "/admin",
+    remoteUrl: "https://admin.example.com/remoteEntry.js",
+    module: "./AdminApp",
+    description: "Internal admin interface for managing users and configuration."
+  },
+  {
+    name: "Analytics Dashboard",
+    feature: "analytics-mfe",
+    route: "/analytics",
+    remoteUrl: "https://app.example.com/analytics/remoteEntry.js",
+    module: "./AnalyticsApp",
+    description: "Business intelligence and analytics microfrontend."
+  }
+]);
+print("✓ Inserted MFE Registry documents");
+
+// ─── 4. Seed Roles (10 documents) ───────────────────────────────────────────
+db.roles.insertMany([
+  {
+    _id: "role_super-admin",
     name: "super-admin",
     description: "Unrestricted access to all services and admin interfaces.",
-    allowedServices: [
-      { serviceId: ids.authSvc,      actions: ["session:create", "session:revoke", "token:refresh", "mfa:enable", "mfa:disable"] },
-      { serviceId: ids.userSvc,      actions: ["user:read", "user:create", "user:update", "user:delete", "user:list"] },
-      { serviceId: ids.bilingSvc,    actions: ["invoice:read", "invoice:create", "subscription:read", "subscription:update", "subscription:cancel", "payment:refund"] },
-      { serviceId: ids.notifSvc,     actions: ["email:send", "sms:send", "notification:read", "template:manage"] },
-      { serviceId: ids.reportSvc,    actions: ["report:read", "report:generate", "report:export", "report:schedule"] },
-      { serviceId: ids.dashboardMfe, actions: ["dashboard:view", "widget:customize"] },
-      { serviceId: ids.adminMfe,     actions: ["admin-panel:access", "config:read", "config:update", "audit-log:read"] },
-      { serviceId: ids.analyticsMfe, actions: ["analytics:view", "analytics:export", "funnel:build"] },
+    permissions: [
+      "auth-service:session:create", "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
+      "user-service:user:read", "user-service:user:create", "user-service:user:update", "user-service:user:delete", "user-service:user:list",
+      "billing-service:invoice:read", "billing-service:invoice:create", "billing-service:subscription:read", "billing-service:subscription:update", "billing-service:subscription:cancel", "billing-service:payment:refund",
+      "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage",
+      "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
     ],
+    mfeAccess: ["dashboard-mfe", "admin-mfe", "analytics-mfe"],
     isTemp: false,
     createdAt: new Date("2024-01-12T08:00:00Z"),
-    updatedAt: new Date("2024-01-12T08:00:00Z"),
+    updatedAt: new Date("2024-01-12T08:00:00Z")
   },
-
-  // 2. Regular User — read-only + dashboard
   {
+    _id: "role_user",
     name: "user",
     description: "Standard end-user with access to their own data and the dashboard.",
-    allowedServices: [
-      { serviceId: ids.userSvc,      actions: ["user:read", "user:update"] },
-      { serviceId: ids.bilingSvc,    actions: ["invoice:read", "subscription:read"] },
-      { serviceId: ids.notifSvc,     actions: ["notification:read"] },
-      { serviceId: ids.dashboardMfe, actions: ["dashboard:view"] },
+    permissions: [
+      "user-service:user:read", "user-service:user:update",
+      "billing-service:invoice:read", "billing-service:subscription:read",
+      "notification-service:notification:read"
     ],
+    mfeAccess: ["dashboard-mfe"],
     isTemp: false,
     createdAt: new Date("2024-01-12T08:30:00Z"),
-    updatedAt: new Date("2024-01-12T08:30:00Z"),
+    updatedAt: new Date("2024-01-12T08:30:00Z")
   },
-
-  // 3. Support Agent
   {
+    _id: "role_support-agent",
     name: "support-agent",
     description: "Customer support staff with read access and limited user management.",
-    allowedServices: [
-      { serviceId: ids.userSvc,      actions: ["user:read", "user:list", "user:update"] },
-      { serviceId: ids.bilingSvc,    actions: ["invoice:read", "subscription:read"] },
-      { serviceId: ids.notifSvc,     actions: ["email:send", "notification:read"] },
-      { serviceId: ids.dashboardMfe, actions: ["dashboard:view"] },
+    permissions: [
+      "user-service:user:read", "user-service:user:list", "user-service:user:update",
+      "billing-service:invoice:read", "billing-service:subscription:read",
+      "notification-service:email:send", "notification-service:notification:read"
     ],
+    mfeAccess: ["dashboard-mfe"],
     isTemp: false,
     createdAt: new Date("2024-01-20T09:00:00Z"),
-    updatedAt: new Date("2024-01-20T09:00:00Z"),
+    updatedAt: new Date("2024-01-20T09:00:00Z")
   },
-
-  // 4. Finance Manager
   {
+    _id: "role_finance-manager",
     name: "finance-manager",
     description: "Full access to billing, invoices, and financial reports.",
-    allowedServices: [
-      { serviceId: ids.bilingSvc,    actions: ["invoice:read", "invoice:create", "subscription:read", "subscription:update", "subscription:cancel", "payment:refund"] },
-      { serviceId: ids.reportSvc,    actions: ["report:read", "report:generate", "report:export", "report:schedule"] },
-      { serviceId: ids.analyticsMfe, actions: ["analytics:view", "analytics:export"] },
-      { serviceId: ids.dashboardMfe, actions: ["dashboard:view"] },
+    permissions: [
+      "billing-service:invoice:read", "billing-service:invoice:create", "billing-service:subscription:read", "billing-service:subscription:update", "billing-service:subscription:cancel", "billing-service:payment:refund",
+      "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
     ],
+    mfeAccess: ["dashboard-mfe", "analytics-mfe"],
     isTemp: false,
     createdAt: new Date("2024-02-05T10:00:00Z"),
-    updatedAt: new Date("2024-02-05T10:00:00Z"),
+    updatedAt: new Date("2024-02-05T10:00:00Z")
   },
-
-  // 5. DevOps / Platform Admin
   {
+    _id: "role_platform-admin",
     name: "platform-admin",
     description: "Manages system configuration, auth sessions, and audit logs.",
-    allowedServices: [
-      { serviceId: ids.authSvc,  actions: ["session:revoke", "token:refresh", "mfa:enable", "mfa:disable"] },
-      { serviceId: ids.adminMfe, actions: ["admin-panel:access", "config:read", "config:update", "audit-log:read"] },
-      { serviceId: ids.userSvc,  actions: ["user:read", "user:list"] },
+    permissions: [
+      "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
+      "user-service:user:read", "user-service:user:list"
     ],
+    mfeAccess: ["admin-mfe"],
     isTemp: false,
     createdAt: new Date("2024-02-10T11:00:00Z"),
-    updatedAt: new Date("2024-02-10T11:00:00Z"),
+    updatedAt: new Date("2024-02-10T11:00:00Z")
   },
-
-  // 6. Read-Only Analyst
   {
+    _id: "role_analyst",
     name: "analyst",
     description: "Read-only access to analytics, reports, and dashboards.",
-    allowedServices: [
-      { serviceId: ids.reportSvc,    actions: ["report:read", "report:export"] },
-      { serviceId: ids.analyticsMfe, actions: ["analytics:view", "analytics:export", "funnel:build"] },
-      { serviceId: ids.dashboardMfe, actions: ["dashboard:view", "widget:customize"] },
+    permissions: [
+      "report-service:report:read", "report-service:report:export"
     ],
+    mfeAccess: ["dashboard-mfe", "analytics-mfe"],
     isTemp: false,
     createdAt: new Date("2024-03-01T09:00:00Z"),
-    updatedAt: new Date("2024-03-01T09:00:00Z"),
+    updatedAt: new Date("2024-03-01T09:00:00Z")
   },
-
-  // 7. Notification Manager
   {
+    _id: "role_notification-manager",
     name: "notification-manager",
     description: "Manages notification templates and sends bulk communications.",
-    allowedServices: [
-      { serviceId: ids.notifSvc, actions: ["email:send", "sms:send", "notification:read", "template:manage"] },
-      { serviceId: ids.userSvc,  actions: ["user:read", "user:list"] },
+    permissions: [
+      "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage",
+      "user-service:user:read", "user-service:user:list"
     ],
+    mfeAccess: [],
     isTemp: false,
     createdAt: new Date("2024-04-15T10:00:00Z"),
-    updatedAt: new Date("2024-04-15T10:00:00Z"),
+    updatedAt: new Date("2024-04-15T10:00:00Z")
   },
-
-  // 8. Guest — minimal read-only
   {
+    _id: "role_guest",
     name: "guest",
     description: "Unauthenticated or trial users with very limited access.",
-    allowedServices: [
-      { serviceId: ids.dashboardMfe, actions: ["dashboard:view"] },
-    ],
+    permissions: [],
+    mfeAccess: ["dashboard-mfe"],
     isTemp: false,
     createdAt: new Date("2024-05-01T08:00:00Z"),
-    updatedAt: new Date("2024-05-01T08:00:00Z"),
+    updatedAt: new Date("2024-05-01T08:00:00Z")
   },
-
-  // 9. Temporary Contractor — time-bounded
   {
+    _id: "role_contractor-dev",
     name: "contractor-dev",
     description: "Temporary developer access for an external contractor engagement.",
-    allowedServices: [
-      { serviceId: ids.userSvc,      actions: ["user:read", "user:list"] },
-      { serviceId: ids.reportSvc,    actions: ["report:read", "report:generate"] },
-      { serviceId: ids.analyticsMfe, actions: ["analytics:view"] },
-      { serviceId: ids.dashboardMfe, actions: ["dashboard:view"] },
+    permissions: [
+      "user-service:user:read", "user-service:user:list",
+      "report-service:report:read", "report-service:report:generate"
     ],
+    mfeAccess: ["dashboard-mfe", "analytics-mfe"],
     isTemp: true,
-    startDate: new Date("2025-06-01T00:00:00Z"),
-    endDate:   new Date("2025-08-31T23:59:59Z"),
+    expiresAt: new Date("2025-08-31T23:59:59Z"), // Replaced startDate/endDate with single expiresAt
     createdAt: new Date("2025-05-20T12:00:00Z"),
-    updatedAt: new Date("2025-05-20T12:00:00Z"),
+    updatedAt: new Date("2025-05-20T12:00:00Z")
   },
-
-  // 10. Temporary Auditor — time-bounded
   {
+    _id: "role_external-auditor",
     name: "external-auditor",
     description: "Short-term access granted to an external compliance auditor.",
-    allowedServices: [
-      { serviceId: ids.adminMfe,     actions: ["audit-log:read", "config:read"] },
-      { serviceId: ids.bilingSvc,    actions: ["invoice:read", "subscription:read"] },
-      { serviceId: ids.reportSvc,    actions: ["report:read", "report:export"] },
+    permissions: [
+      "billing-service:invoice:read", "billing-service:subscription:read",
+      "report-service:report:read", "report-service:report:export"
     ],
+    mfeAccess: ["admin-mfe"],
     isTemp: true,
-    startDate: new Date("2025-09-01T00:00:00Z"),
-    endDate:   new Date("2025-09-30T23:59:59Z"),
+    expiresAt: new Date("2025-09-30T23:59:59Z"), // Replaced startDate/endDate with single expiresAt
     createdAt: new Date("2025-08-25T14:00:00Z"),
-    updatedAt: new Date("2025-08-25T14:00:00Z"),
-  },
+    updatedAt: new Date("2025-08-25T14:00:00Z")
+  }
 ]);
-
 print("✓ Inserted 10 Role documents");
-print("Seed complete.");
+
+print("🚀 Seed complete! Database is hydrated with flattened, high-performance schema.");

@@ -2,19 +2,14 @@ const jwt = require("jsonwebtoken");
 
 /**
  * Extracts and verifies the Bearer JWT from the Authorization header.
- * On success attaches `req.tokenPayload` and continues.
- * On failure returns 401 / 403.
- *
  * Expected token payload shape:
- *   { userId: string, roleId?: string, roleIds?: string[], iat: number, exp: number }
+ * { userId: string, roleId?: string, roleIds?: string[], iat: number, exp: number }
  */
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers["authorization"];
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({
-      error: "Missing or malformed Authorization header. Expected: Bearer <token>",
-    });
+    return res.status(401).json({ error: "Missing/malformed Authorization header." });
   }
 
   const token = authHeader.split(" ")[1];
@@ -25,9 +20,7 @@ const verifyToken = (req, res, next) => {
     req.tokenPayload = payload;
     next();
   } catch (err) {
-    if (err.name === "TokenExpiredError") {
-      return res.status(401).json({ error: "Token has expired" });
-    }
+    if (err.name === "TokenExpiredError") return res.status(401).json({ error: "Token expired" });
     return res.status(403).json({ error: "Invalid token", detail: err.message });
   }
 };

@@ -1,58 +1,40 @@
 const mongoose = require("mongoose");
 
-const serviceAccessSchema = new mongoose.Schema(
-    {
-        serviceId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "ServiceRegistry",
-            required: true,
-        },
-        actions: {
-            type: [String],
-            required: true,
-            validate: {
-                validator: (actions) => actions.length > 0,
-                message: "At least one action is required per service",
-            },
-        },
-    },
-    { _id: false }
-);
-
 const roleSchema = new mongoose.Schema(
     {
+        // Custom string ID matching your DB design (e.g., 'role_support')
+        _id: {
+            type: String,
+            required: true,
+            trim: true,
+            lowercase: true,
+        },
         name: {
             type: String,
             required: true,
-            unique: true,
             trim: true,
-            lowercase: true,
         },
         description: {
             type: String,
             trim: true,
         },
-        allowedServices: {
-            type: [serviceAccessSchema],
+        // Flattened array of API permission strings (e.g., ["user-svc:profile:read"])
+        permissions: {
+            type: [String],
             default: [],
-            validate: {
-                validator: function (services) {
-                    const set = new Set(services.map((s) => s.serviceId.toString()));
-                    return set.size === services.length;
-                },
-                message: "Duplicate service entries are not allowed in a role",
-            },
+        },
+        // Flattened array of frontend feature IDs (e.g., ["set-ui"])
+        mfeAccess: {
+            type: [String],
+            default: [],
         },
         isTemp: {
             type: Boolean,
             default: false,
         },
-        startDate: {
+        expiresAt: {
             type: Date,
-            required: function () { return this.isTemp; },
-        },
-        endDate: {
-            type: Date,
+            default: null,
             required: function () { return this.isTemp; },
         },
     },

@@ -1,190 +1,122 @@
-const ObjectId = globalThis.ObjectId
+/**
+ * Modern RBAC Database Seed Script
+ * Run this script to populate the flattened ApiRegistry, MfeRegistry, and Roles.
+ */
 
-const ids = {
-  authSvc:      ObjectId("6650000000000000000000a1"),
-  userSvc:      ObjectId("6650000000000000000000a2"),
-  billingSvc:   ObjectId("6650000000000000000000a3"),
-  notifSvc:     ObjectId("6650000000000000000000a4"),
-  reportSvc:    ObjectId("6650000000000000000000a5"),
-  dashboardMfe: ObjectId("6650000000000000000000a6"),
-  adminMfe:     ObjectId("6650000000000000000000a7"),
-  analyticsMfe: ObjectId("6650000000000000000000a8"),
-}
+// 1. Clear existing collections
+db.apiregistries.deleteMany({});
+db.mferegistries.deleteMany({});
+db.roles.deleteMany({});
 
-db.serviceregistries.deleteMany({})
-db.roles.deleteMany({})
+// 2. Seed API Registry (Microservices)
+// Note: Base URLs are omitted here as they belong in the API Gateway config (.env)
+db.apiregistries.insertMany([
+  // --- Auth Service ---
+  { service: "auth-svc", resource: "session", action: "create", permissionKey: "auth-svc:session:create", isActive: true },
+  { service: "auth-svc", resource: "session", action: "revoke", permissionKey: "auth-svc:session:revoke", isActive: true },
+  { service: "auth-svc", resource: "token", action: "refresh", permissionKey: "auth-svc:token:refresh", isActive: true },
+  { service: "auth-svc", resource: "mfa", action: "enable", permissionKey: "auth-svc:mfa:enable", isActive: true },
+  { service: "auth-svc", resource: "mfa", action: "disable", permissionKey: "auth-svc:mfa:disable", isActive: true },
 
-db.serviceregistries.insertMany([
-{
-_id: ids.authSvc,
-serviceName: "Auth Service",
-serviceIdentifier: "auth-service",
-description: "Handles authentication and token issuance.",
-serviceType: "microservice",
-baseUrl: "https://auth.internal.example.com",
-exposedPermissions: [
-{ resource: "session", action: "create" },
-{ resource: "session", action: "revoke" },
-{ resource: "token", action: "refresh" },
-{ resource: "mfa", action: "enable" },
-{ resource: "mfa", action: "disable" }
-],
-isActive: true,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-_id: ids.userSvc,
-serviceName: "User Service",
-serviceIdentifier: "user-service",
-description: "User management service.",
-serviceType: "microservice",
-baseUrl: "https://users.internal.example.com",
-exposedPermissions: [
-{ resource: "user", action: "read" },
-{ resource: "user", action: "create" },
-{ resource: "user", action: "update" },
-{ resource: "user", action: "delete" },
-{ resource: "user", action: "list" }
-],
-isActive: true,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-_id: ids.billingSvc,
-serviceName: "Billing Service",
-serviceIdentifier: "billing-service",
-description: "Handles invoices and subscriptions.",
-serviceType: "microservice",
-baseUrl: "https://billing.internal.example.com",
-exposedPermissions: [
-{ resource: "invoice", action: "read" },
-{ resource: "invoice", action: "create" },
-{ resource: "subscription", action: "read" },
-{ resource: "subscription", action: "update" },
-{ resource: "subscription", action: "cancel" },
-{ resource: "payment", action: "refund" }
-],
-isActive: true,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-_id: ids.notifSvc,
-serviceName: "Notification Service",
-serviceIdentifier: "notification-service",
-description: "Handles emails and SMS.",
-serviceType: "microservice",
-baseUrl: "https://notify.internal.example.com",
-exposedPermissions: [
-{ resource: "email", action: "send" },
-{ resource: "sms", action: "send" },
-{ resource: "notification", action: "read" },
-{ resource: "template", action: "manage" }
-],
-isActive: true,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-_id: ids.reportSvc,
-serviceName: "Report Service",
-serviceIdentifier: "report-service",
-description: "Report generation service.",
-serviceType: "microservice",
-baseUrl: "https://reports.internal.example.com",
-exposedPermissions: [
-{ resource: "report", action: "read" },
-{ resource: "report", action: "generate" },
-{ resource: "report", action: "export" },
-{ resource: "report", action: "schedule" }
-],
-isActive: false,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-_id: ids.dashboardMfe,
-serviceName: "Dashboard",
-serviceIdentifier: "dashboard-mfe",
-description: "Main dashboard UI.",
-serviceType: "microfrontend",
-baseUrl: "https://app.example.com/dashboard",
-exposedPermissions: [
-{ resource: "dashboard", action: "view" },
-{ resource: "widget", action: "customize" }
-],
-isActive: true,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-_id: ids.adminMfe,
-serviceName: "Admin Panel",
-serviceIdentifier: "admin-mfe",
-description: "Admin interface.",
-serviceType: "microfrontend",
-baseUrl: "https://admin.example.com",
-exposedPermissions: [
-{ resource: "admin-panel", action: "access" },
-{ resource: "config", action: "read" },
-{ resource: "config", action: "update" },
-{ resource: "audit-log", action: "read" }
-],
-isActive: true,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-_id: ids.analyticsMfe,
-serviceName: "Analytics",
-serviceIdentifier: "analytics-mfe",
-description: "Analytics dashboard.",
-serviceType: "microfrontend",
-baseUrl: "https://app.example.com/analytics",
-exposedPermissions: [
-{ resource: "analytics", action: "view" },
-{ resource: "analytics", action: "export" },
-{ resource: "funnel", action: "build" }
-],
-isActive: true,
-createdAt: new Date(),
-updatedAt: new Date()
-}
-])
+  // --- User Service ---
+  { service: "user-svc", resource: "user", action: "read", permissionKey: "user-svc:user:read", isActive: true },
+  { service: "user-svc", resource: "user", action: "create", permissionKey: "user-svc:user:create", isActive: true },
+  { service: "user-svc", resource: "user", action: "update", permissionKey: "user-svc:user:update", isActive: true },
+  { service: "user-svc", resource: "user", action: "delete", permissionKey: "user-svc:user:delete", isActive: true },
+  { service: "user-svc", resource: "user", action: "list", permissionKey: "user-svc:user:list", isActive: true },
 
+  // --- Billing Service ---
+  { service: "billing-svc", resource: "invoice", action: "read", permissionKey: "billing-svc:invoice:read", isActive: true },
+  { service: "billing-svc", resource: "invoice", action: "create", permissionKey: "billing-svc:invoice:create", isActive: true },
+  { service: "billing-svc", resource: "subscription", action: "read", permissionKey: "billing-svc:subscription:read", isActive: true },
+  { service: "billing-svc", resource: "subscription", action: "update", permissionKey: "billing-svc:subscription:update", isActive: true },
+  { service: "billing-svc", resource: "subscription", action: "cancel", permissionKey: "billing-svc:subscription:cancel", isActive: true },
+  { service: "billing-svc", resource: "payment", action: "refund", permissionKey: "billing-svc:payment:refund", isActive: true },
+
+  // --- Notification Service ---
+  { service: "notify-svc", resource: "email", action: "send", permissionKey: "notify-svc:email:send", isActive: true },
+  { service: "notify-svc", resource: "sms", action: "send", permissionKey: "notify-svc:sms:send", isActive: true },
+  { service: "notify-svc", resource: "notification", action: "read", permissionKey: "notify-svc:notification:read", isActive: true },
+  { service: "notify-svc", resource: "template", action: "manage", permissionKey: "notify-svc:template:manage", isActive: true }
+]);
+
+// 3. Seed MFE Registry (Microfrontends)
+// Note: Includes remote URLs for Webpack Module Federation
+db.mferegistries.insertMany([
+  {
+    name: "Dashboard",
+    feature: "dashboard-mfe",
+    route: "/dashboard",
+    remoteUrl: "https://app.example.com/dashboard/remoteEntry.js",
+    module: "./DashboardApp",
+    description: "Main dashboard UI."
+  },
+  {
+    name: "Admin Panel",
+    feature: "admin-mfe",
+    route: "/admin",
+    remoteUrl: "https://admin.example.com/remoteEntry.js",
+    module: "./AdminApp",
+    description: "Admin interface."
+  },
+  {
+    name: "Analytics",
+    feature: "analytics-mfe",
+    route: "/analytics",
+    remoteUrl: "https://app.example.com/analytics/remoteEntry.js",
+    module: "./AnalyticsApp",
+    description: "Analytics dashboard."
+  }
+]);
+
+// 4. Seed Roles (Flattened)
+// Notice there are no ObjectIds here. Just the human-readable slug (_id) and flat arrays.
 db.roles.insertMany([
-{
-name: "super-admin",
-allowedServices: [
-{ serviceId: ids.authSvc, actions: ["session:create","session:revoke","token:refresh","mfa:enable","mfa:disable"] },
-{ serviceId: ids.userSvc, actions: ["user:read","user:create","user:update","user:delete","user:list"] },
-{ serviceId: ids.billingSvc, actions: ["invoice:read","invoice:create","subscription:read","subscription:update","subscription:cancel","payment:refund"] }
-],
-isTemp: false,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-name: "user",
-allowedServices: [
-{ serviceId: ids.userSvc, actions: ["user:read","user:update"] },
-{ serviceId: ids.dashboardMfe, actions: ["dashboard:view"] }
-],
-isTemp: false,
-createdAt: new Date(),
-updatedAt: new Date()
-},
-{
-name: "guest",
-allowedServices: [
-{ serviceId: ids.dashboardMfe, actions: ["dashboard:view"] }
-],
-isTemp: false,
-createdAt: new Date(),
-updatedAt: new Date()
-}
-])
+  {
+    _id: "role_super-admin",
+    name: "Super Admin",
+    description: "Full system access.",
+    permissions: [
+      "auth-svc:session:create", "auth-svc:session:revoke", "auth-svc:token:refresh", "auth-svc:mfa:enable", "auth-svc:mfa:disable",
+      "user-svc:user:read", "user-svc:user:create", "user-svc:user:update", "user-svc:user:delete", "user-svc:user:list",
+      "billing-svc:invoice:read", "billing-svc:invoice:create", "billing-svc:subscription:read", "billing-svc:subscription:update", "billing-svc:subscription:cancel", "billing-svc:payment:refund"
+    ],
+    mfeAccess: [
+      "dashboard-mfe",
+      "admin-mfe",
+      "analytics-mfe"
+    ],
+    isTemp: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: "role_user",
+    name: "Standard User",
+    description: "Regular authenticated user access.",
+    permissions: [
+      "user-svc:user:read",
+      "user-svc:user:update"
+    ],
+    mfeAccess: [
+      "dashboard-mfe"
+    ],
+    isTemp: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    _id: "role_guest",
+    name: "Guest",
+    description: "Read-only unauthenticated access.",
+    permissions: [], // No API write access
+    mfeAccess: [
+      "dashboard-mfe"
+    ],
+    isTemp: false,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+]);
 
-print("Seed complete")
+print("✅ Seed complete! Database is hydrated with flattened schemas.");

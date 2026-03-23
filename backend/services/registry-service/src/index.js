@@ -1,19 +1,41 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
 require("dotenv").config();
-const registryRoutes = require("./routes/RegistryRoutes.js");
+const express = require("express");
+const cors = require("cors"); // REQUIRED for React frontend to talk to this API
+const connectDB = require("./config/db.config");
+
+const apiRoutes = require("./routes/apiRegistry.routes");
+const mfeRoutes = require("./routes/mfeRegistry.routes");
 
 const app = express();
-app.use(express.json());
-app.use(cors());
 
-app.use("/registry", registryRoutes);
+// --- Middleware ---
+app.use(cors()); // Allow cross-origin requests
+app.use(express.json()); // Parse incoming JSON payloads
 
-mongoose.connect(process.env.MONGO_DB_URI)
-    .then(() => console.log("MongoDB connected for Registry Service"))
-    .catch((err) => console.error("DB error:", err));
+// --- Database Connection ---
+connectDB();
 
-app.listen(process.env.PORT, () => {
-    console.log(`Registry service running on port ${process.env.PORT}`);
+// --- Route Mounting ---
+// Mount API Registry routes. 
+// Frontend calls: POST /registry/services/bulk
+app.use("/registry/services", apiRoutes);
+
+// Mount MFE Registry routes. 
+// Frontend calls: POST /registry/mfes
+app.use("/registry/mfes", mfeRoutes);
+
+// --- Health Check ---
+app.get("/", (req, res) => {
+  res.status(200).json({ 
+    service: "Registry Service",
+    status: "Running 🚀",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// --- Server Initialization ---
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, () => {
+  console.log(`Registry Service is running on port ${PORT}`);
 });

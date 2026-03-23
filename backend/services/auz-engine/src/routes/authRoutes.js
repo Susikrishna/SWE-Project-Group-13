@@ -5,34 +5,19 @@ const loadAccessProfile = require("../middleware/loadAccessProfile");
 const requirePermission = require("../middleware/requirePermission");
 const { authorize, checkAccess } = require("../controllers/authorizeController");
 
-/**
- * GET /auth/authorize
- *
- * Headers:
- *   Authorization: Bearer <jwt>
- *
- * Returns the caller's role and all assigned microservices / microfrontends.
- */
+// Full Authorization Profile Retrieval (Used by Frontend/Gateway on login)
 router.get("/authorize", verifyToken, loadAccessProfile, authorize);
 
-/**
- * POST /auth/check-access
- * Body: { "serviceId": "<ObjectId>", "action": "user:update" }
- */
+// Instant boolean check (Used by backend microservices)
 router.post("/check-access", verifyToken, loadAccessProfile, checkAccess);
 
-/**
- * Example protected route using hardcoded required permission.
- * Update service/action to match each downstream route contract.
- */
+// Example route proving the middleware works with the new string format
 router.get(
     "/protected/user-update",
     verifyToken,
     loadAccessProfile,
-    requirePermission("6650000000000000000000a2", "user:update"),
-    (_req, res) => {
-        return res.status(200).json({ allowed: true, route: "user:update" });
-    }
+    requirePermission("user-svc:profile:update"), // Clean string-based auth!
+    (_req, res) => res.status(200).json({ allowed: true, message: "Welcome Admin!" })
 );
 
 module.exports = router;
