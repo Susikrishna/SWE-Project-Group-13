@@ -1,17 +1,18 @@
+// src/App.jsx
 import React from "react";
-import RegistryManagement from "./components/RegsitryManagement.jsx";
+import { Routes, Route } from "react-router-dom";
+import RegistrationPage from "./pages/RegistrationPage";
+import RegistryListPage from "./pages/RegistryListPage";
+import MfeNavbar from "./components/MfeNavbar";
 
 const App = () => {
-  const styles = {
-    app: {
-      width: "100vw",
-      height: "100vh"
-    }
-  };
-
   return (
-    <div style={styles.app}>
-      <RegistryManagement />
+    <div style={{ position: "relative", width: "100%", minHeight: "100vh" }}>
+      <MfeNavbar />
+      <Routes>
+        <Route path="/" element={<RegistrationPage />} />
+        <Route path="list" element={<RegistryListPage />} />
+      </Routes>
     </div>
   );
 };

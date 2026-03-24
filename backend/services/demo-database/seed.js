@@ -9,41 +9,41 @@ db.mferegistries.deleteMany({});
 db.roles.deleteMany({});
 
 // ─── 2. Seed API Registry (Microservices) ───────────────────────────────────
-// Base URLs are omitted here as they are managed by the API Gateway configuration.
+// FULLY CORRECTED: Added basePath, route, and method to satisfy Mongoose schema
 db.apiregistries.insertMany([
   // Auth Service
-  { service: "auth-service", resource: "session", action: "create", permissionKey: "auth-service:session:create", isActive: true },
-  { service: "auth-service", resource: "session", action: "revoke", permissionKey: "auth-service:session:revoke", isActive: true },
-  { service: "auth-service", resource: "token", action: "refresh", permissionKey: "auth-service:token:refresh", isActive: true },
-  { service: "auth-service", resource: "mfa", action: "enable", permissionKey: "auth-service:mfa:enable", isActive: true },
-  { service: "auth-service", resource: "mfa", action: "disable", permissionKey: "auth-service:mfa:disable", isActive: true },
+  { service: "auth-service", basePath: "/api/v1/auth", route: "/sessions", method: "POST", resource: "session", action: "create", permissionKey: "auth-service:session:create", isActive: true },
+  { service: "auth-service", basePath: "/api/v1/auth", route: "/sessions/:id", method: "DELETE", resource: "session", action: "revoke", permissionKey: "auth-service:session:revoke", isActive: true },
+  { service: "auth-service", basePath: "/api/v1/auth", route: "/tokens/refresh", method: "POST", resource: "token", action: "refresh", permissionKey: "auth-service:token:refresh", isActive: true },
+  { service: "auth-service", basePath: "/api/v1/auth", route: "/mfa/enable", method: "POST", resource: "mfa", action: "enable", permissionKey: "auth-service:mfa:enable", isActive: true },
+  { service: "auth-service", basePath: "/api/v1/auth", route: "/mfa/disable", method: "POST", resource: "mfa", action: "disable", permissionKey: "auth-service:mfa:disable", isActive: true },
 
   // User Service
-  { service: "user-service", resource: "user", action: "read", permissionKey: "user-service:user:read", isActive: true },
-  { service: "user-service", resource: "user", action: "create", permissionKey: "user-service:user:create", isActive: true },
-  { service: "user-service", resource: "user", action: "update", permissionKey: "user-service:user:update", isActive: true },
-  { service: "user-service", resource: "user", action: "delete", permissionKey: "user-service:user:delete", isActive: true },
-  { service: "user-service", resource: "user", action: "list", permissionKey: "user-service:user:list", isActive: true },
+  { service: "user-service", basePath: "/api/v1/users", route: "/:id", method: "GET", resource: "user", action: "read", permissionKey: "user-service:user:read", isActive: true },
+  { service: "user-service", basePath: "/api/v1/users", route: "/", method: "POST", resource: "user", action: "create", permissionKey: "user-service:user:create", isActive: true },
+  { service: "user-service", basePath: "/api/v1/users", route: "/:id", method: "PUT", resource: "user", action: "update", permissionKey: "user-service:user:update", isActive: true },
+  { service: "user-service", basePath: "/api/v1/users", route: "/:id", method: "DELETE", resource: "user", action: "delete", permissionKey: "user-service:user:delete", isActive: true },
+  { service: "user-service", basePath: "/api/v1/users", route: "/", method: "GET", resource: "user", action: "list", permissionKey: "user-service:user:list", isActive: true },
 
   // Billing Service
-  { service: "billing-service", resource: "invoice", action: "read", permissionKey: "billing-service:invoice:read", isActive: true },
-  { service: "billing-service", resource: "invoice", action: "create", permissionKey: "billing-service:invoice:create", isActive: true },
-  { service: "billing-service", resource: "subscription", action: "read", permissionKey: "billing-service:subscription:read", isActive: true },
-  { service: "billing-service", resource: "subscription", action: "update", permissionKey: "billing-service:subscription:update", isActive: true },
-  { service: "billing-service", resource: "subscription", action: "cancel", permissionKey: "billing-service:subscription:cancel", isActive: true },
-  { service: "billing-service", resource: "payment", action: "refund", permissionKey: "billing-service:payment:refund", isActive: true },
+  { service: "billing-service", basePath: "/api/v1/billing", route: "/invoices/:id", method: "GET", resource: "invoice", action: "read", permissionKey: "billing-service:invoice:read", isActive: true },
+  { service: "billing-service", basePath: "/api/v1/billing", route: "/invoices", method: "POST", resource: "invoice", action: "create", permissionKey: "billing-service:invoice:create", isActive: true },
+  { service: "billing-service", basePath: "/api/v1/billing", route: "/subscriptions/:id", method: "GET", resource: "subscription", action: "read", permissionKey: "billing-service:subscription:read", isActive: true },
+  { service: "billing-service", basePath: "/api/v1/billing", route: "/subscriptions/:id", method: "PUT", resource: "subscription", action: "update", permissionKey: "billing-service:subscription:update", isActive: true },
+  { service: "billing-service", basePath: "/api/v1/billing", route: "/subscriptions/:id", method: "DELETE", resource: "subscription", action: "cancel", permissionKey: "billing-service:subscription:cancel", isActive: true },
+  { service: "billing-service", basePath: "/api/v1/billing", route: "/payments/:id/refund", method: "POST", resource: "payment", action: "refund", permissionKey: "billing-service:payment:refund", isActive: true },
 
   // Notification Service
-  { service: "notification-service", resource: "email", action: "send", permissionKey: "notification-service:email:send", isActive: true },
-  { service: "notification-service", resource: "sms", action: "send", permissionKey: "notification-service:sms:send", isActive: true },
-  { service: "notification-service", resource: "notification", action: "read", permissionKey: "notification-service:notification:read", isActive: true },
-  { service: "notification-service", resource: "template", action: "manage", permissionKey: "notification-service:template:manage", isActive: true },
+  { service: "notification-service", basePath: "/api/v1/notifications", route: "/email", method: "POST", resource: "email", action: "send", permissionKey: "notification-service:email:send", isActive: true },
+  { service: "notification-service", basePath: "/api/v1/notifications", route: "/sms", method: "POST", resource: "sms", action: "send", permissionKey: "notification-service:sms:send", isActive: true },
+  { service: "notification-service", basePath: "/api/v1/notifications", route: "/:id", method: "GET", resource: "notification", action: "read", permissionKey: "notification-service:notification:read", isActive: true },
+  { service: "notification-service", basePath: "/api/v1/notifications", route: "/templates", method: "PUT", resource: "template", action: "manage", permissionKey: "notification-service:template:manage", isActive: true },
 
   // Report Service (Decommissioned)
-  { service: "report-service", resource: "report", action: "read", permissionKey: "report-service:report:read", isActive: false },
-  { service: "report-service", resource: "report", action: "generate", permissionKey: "report-service:report:generate", isActive: false },
-  { service: "report-service", resource: "report", action: "export", permissionKey: "report-service:report:export", isActive: false },
-  { service: "report-service", resource: "report", action: "schedule", permissionKey: "report-service:report:schedule", isActive: false }
+  { service: "report-service", basePath: "/api/v1/reports", route: "/:id", method: "GET", resource: "report", action: "read", permissionKey: "report-service:report:read", isActive: false },
+  { service: "report-service", basePath: "/api/v1/reports", route: "/generate", method: "POST", resource: "report", action: "generate", permissionKey: "report-service:report:generate", isActive: false },
+  { service: "report-service", basePath: "/api/v1/reports", route: "/:id/export", method: "GET", resource: "report", action: "export", permissionKey: "report-service:report:export", isActive: false },
+  { service: "report-service", basePath: "/api/v1/reports", route: "/schedule", method: "POST", resource: "report", action: "schedule", permissionKey: "report-service:report:schedule", isActive: false }
 ]);
 print("✓ Inserted API Registry documents");
 
@@ -53,7 +53,7 @@ db.mferegistries.insertMany([
     name: "Dashboard App",
     feature: "dashboard-mfe",
     route: "/dashboard",
-    remoteUrl: "https://app.example.com/dashboard/remoteEntry.js",
+    remoteUrl: "http://localhost:5000/assets/remoteEntry.js",
     module: "./DashboardApp",
     description: "Main user-facing dashboard microfrontend."
   },
@@ -61,7 +61,7 @@ db.mferegistries.insertMany([
     name: "Admin Panel",
     feature: "admin-mfe",
     route: "/admin",
-    remoteUrl: "https://admin.example.com/remoteEntry.js",
+    remoteUrl: "http://localhost:5001/assets/remoteEntry.js",
     module: "./AdminApp",
     description: "Internal admin interface for managing users and configuration."
   },
@@ -69,7 +69,7 @@ db.mferegistries.insertMany([
     name: "Analytics Dashboard",
     feature: "analytics-mfe",
     route: "/analytics",
-    remoteUrl: "https://app.example.com/analytics/remoteEntry.js",
+    remoteUrl: "http://localhost:5002/assets/remoteEntry.js",
     module: "./AnalyticsApp",
     description: "Business intelligence and analytics microfrontend."
   }
@@ -193,7 +193,7 @@ db.roles.insertMany([
     ],
     mfeAccess: ["dashboard-mfe", "analytics-mfe"],
     isTemp: true,
-    expiresAt: new Date("2025-08-31T23:59:59Z"), // Replaced startDate/endDate with single expiresAt
+    expiresAt: new Date("2025-08-31T23:59:59Z"), 
     createdAt: new Date("2025-05-20T12:00:00Z"),
     updatedAt: new Date("2025-05-20T12:00:00Z")
   },
@@ -207,7 +207,7 @@ db.roles.insertMany([
     ],
     mfeAccess: ["admin-mfe"],
     isTemp: true,
-    expiresAt: new Date("2025-09-30T23:59:59Z"), // Replaced startDate/endDate with single expiresAt
+    expiresAt: new Date("2025-09-30T23:59:59Z"), 
     createdAt: new Date("2025-08-25T14:00:00Z"),
     updatedAt: new Date("2025-08-25T14:00:00Z")
   }
