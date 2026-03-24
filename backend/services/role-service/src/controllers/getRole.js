@@ -11,13 +11,13 @@ const getRoles = async (req, res) => {
 
 const getRoleById = async (req, res) => {
     try {
-        // req.params.id will perfectly match the string ID (e.g., 'role_support')
-        const role = await Role.findById(req.params.id);
+        const role = await Role.findById(req.params.id.trim());
         if (!role) {
             return res.status(404).json({ error: "Role not found" });
         }
         res.status(200).json(role);
     } catch (err) {
+        console.log("ERROR:", err);
         res.status(500).json({ error: err.message });
     }
 };

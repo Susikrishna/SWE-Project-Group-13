@@ -58,7 +58,7 @@ function RoleForm() {
 
         fetchRegistries();
     }, []);
-
+    
     // Toggle for Microfrontends
     const toggleMfe = (mfeId) => {
         setSelectedMfes(prev => {
