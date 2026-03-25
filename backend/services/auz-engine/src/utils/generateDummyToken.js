@@ -1,7 +1,7 @@
 /**
  * Usage: node src/utils/generateDummyToken.js role_admin
  */
-require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env") });
+require("dotenv").config({ path: require("path").resolve(__dirname, "../../../../../.env") });
 const jwt = require("jsonwebtoken");
 
 const roleInput = process.argv[2];

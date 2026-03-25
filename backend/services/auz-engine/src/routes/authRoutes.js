@@ -16,7 +16,7 @@ router.get(
     "/protected/user-update",
     verifyToken,
     loadAccessProfile,
-    requirePermission("user-svc:profile:update"), // Clean string-based auth!
+    requirePermission("user-service:user:update"), // Clean string-based auth!
     (_req, res) => res.status(200).json({ allowed: true, message: "Welcome Admin!" })
 );
 

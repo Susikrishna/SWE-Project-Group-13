@@ -1,121 +1,69 @@
-# Role & Permission Management
+# Project Overview & Architecture setup
 
-## Overview
-This project implements a Role-Based Access Control (RBAC) system with microfrontend architecture and backend APIs for Role creation and Registry Management.
-
----
-
-## Tech Stack
-- **Frontend:** React.js
-- **Backend:** Node.js, Express.js
-- **Database:** MongoDB
+This project implements a Role-Based Access Control (RBAC) system with a **microfrontend (MFE)** architecture and independent **backend microservices** for Role creation and Registry Management.
 
 ---
 
-## Setup and Running Instructions
+## Architecture: Hybrid Environment Approach
 
-### Authorization Engine
+To support both seamless local development and decoupled microservices, this monorepo utilizes a **Hybrid `.env` Architecture**:
 
-**Install dependencies:**
-```bash
-cd SWE-Project-Group-13/backend/services/auz-engine
-npm install
-```
+1. **Root `.env` (Global):** Contains strictly shared infrastructure variables like database URLs and global secret keys.
+2. **Service `.env` (Local):** Located inside each specific microservice or microfrontend folder. Contains service-specific properties (e.g., specific `PORT`s for backends, or `VITE_` API URLs for frontends).
 
-**Create a `.env` file:**
-```env
-PORT=
-MONGO_DB_URI=
-JWT_SECRET=
-```
-
-**Run the engine:**
-```bash
-npm run dev
-```
+> **Important:** When starting a backend server, Node will automatically cascade the root `.env` first, and then apply the local `.env` variables securely.
 
 ---
 
-### Registry Management
+## Setup Instructions
 
-#### Backend
-
-**Install dependencies:**
-```bash
-cd SWE-Project-Group-13/backend/services/registry-service
-npm install
-```
-
-**Create a `.env` file:**
+### 1. Global Setup
+At the root of the project `SWE-Project-Group-13`, duplicate the `.env.example` file and rename it to `.env`. Ensure your global secrets are set:
 ```env
-PORT=
-MONGO_DB_URI=
+MONGO_DB_URI=your_mongodb_uri_here
+JWT_SECRET=your_jwt_secret_here
 ```
 
-**Run the backend server:**
-```bash
-npm run dev
-```
+### 2. Authorization Engine (Backend)
+**Location:** `/backend/services/auz-engine`
+1. Install dependencies: `npm install`
+2. Create/Verify its local `.env`:
+   ```env
+   PORT=3000
+   ```
+3. Run: `npm run dev`
 
-#### Frontend
+### 3. Registry Management (Backend & Frontend)
+**Backend Location:** `/backend/services/registry-service`
+1. Install dependencies: `npm install`
+2. Create/Verify its local `.env`:
+   ```env
+   PORT=3001
+   ```
+3. Run: `npm run dev`
 
-**Install dependencies:**
-```bash
-cd SWE-Project-Group-13/frontend/Admin-Registry-Management
-npm install
-```
+**Frontend Location:** `/frontend/Admin-Registry-Management`
+1. Install dependencies: `npm install`
+2. Create/Verify its local `.env`:
+   ```env
+   VITE_REGISTRY_URL=http://localhost:3001
+   ```
+3. Run: `npm run dev`
 
-**Create a `.env` file:**
-> `VITE_REGISTRY_URL` is the URL for the Registry Management backend server.
-```env
-VITE_REGISTRY_URL=
-```
+### 4. Role Creation (Backend & Frontend)
+**Backend Location:** `/backend/services/role-service`
+1. Install dependencies: `npm install`
+2. Create/Verify its local `.env`:
+   ```env
+   PORT=3002
+   ```
+3. Run: `npm run dev`
 
-**Run the frontend server:**
-```bash
-npm run dev
-```
-
----
-
-### Role Creation
-
-#### Backend
-
-**Install dependencies:**
-```bash
-cd SWE-Project-Group-13/backend/services/role-service
-npm install
-```
-
-**Create a `.env` file:**
-```env
-PORT=
-MONGO_DB_URI=
-```
-
-**Run the backend server:**
-```bash
-npm run dev
-```
-
-#### Frontend
-
-**Install dependencies:**
-```bash
-cd SWE-Project-Group-13/frontend/Admin-Role-Creation
-npm install
-```
-
-**Create a `.env` file:**
-> `VITE_SERVER_URL` is the URL for the Role Creation backend server.  
-> `VITE_REGISTRY_URL` is the URL for the Registry Management backend server.
-```env
-VITE_SERVER_URL=
-VITE_REGISTRY_URL=
-```
-
-**Run the frontend server:**
-```bash
-npm run dev
-```
+**Frontend Location:** `/frontend/Admin-Role-Creation`
+1. Install dependencies: `npm install`
+2. Create/Verify its local `.env`:
+   ```env
+   VITE_SERVER_URL=http://localhost:3002
+   VITE_REGISTRY_URL=http://localhost:3001
+   ```
+3. Run: `npm run dev`
