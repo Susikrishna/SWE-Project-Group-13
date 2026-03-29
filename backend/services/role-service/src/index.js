@@ -12,7 +12,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Mount the role routes
 app.use("/roles", roleRoutes);
 
 mongoose.connect(process.env.MONGO_DB_URI)

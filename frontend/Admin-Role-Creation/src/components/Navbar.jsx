@@ -4,7 +4,7 @@ const routes = [
     { id: "", path: "/", label: "Home", icon: "⌂" },
     { id: "newRole", path: "/newRole", label: "Create Role", icon: "✦" },
     { id: "role", path: "/role", label: "All Roles", icon: "◈" },
-    
+    { id: "addRole", path: "/userToRole", label: "Add Roles", icon: "-" },
 ];
 
 function Navbar() {
@@ -15,7 +15,7 @@ function Navbar() {
         <>
             <style>{navStyles}</style>
             <nav className="top-navbar">
-                <div className="navbar-logo">Admin<span>.</span>Panel</div>
+                <div className="navbar-logo">Admin<span> </span>Panel</div>
                 <div className="navbar-divider" />
                 {routes.map((route) => (
                     <button
@@ -23,7 +23,6 @@ function Navbar() {
                         className={`nav-link ${location.pathname === route.path ? "active" : ""}`}
                         onClick={() => navigate(route.path)}
                     >
-                        <span className="nav-icon">{route.icon}</span>
                         {route.label}
                     </button>
                 ))}
