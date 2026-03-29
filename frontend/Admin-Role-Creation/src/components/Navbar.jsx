@@ -15,7 +15,7 @@ function Navbar() {
         <>
             <style>{navStyles}</style>
             <nav className="top-navbar">
-                <div className="navbar-logo">Admin<span>.</span>Panel</div>
+                <div className="navbar-logo">Admin<span> </span>Panel</div>
                 <div className="navbar-divider" />
                 {routes.map((route) => (
                     <button

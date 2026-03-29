@@ -8,8 +8,13 @@ export default function UserRoleManager() {
 
     const [selectedUser, setSelectedUser] = useState(null);
     const [selectedRoles, setSelectedRoles] = useState([]);
-    const [submitting, setSubmitting] = useState(false);
     const [statusMsg, setStatusMsg] = useState({ text: "", type: "" });
+    const operations = {
+        ASSIGN: 1,
+        REMOVE: 2,
+        NONE: 0,
+    }
+    const [operType, setOperType] = useState(operations.NONE)
 
     const fetchUsers = useCallback(async () => {
         try {
@@ -23,7 +28,7 @@ export default function UserRoleManager() {
             setUsers([]);
         }
     }, []);
-    
+
     const fetchRoles = useCallback(async () => {
         try {
             const res = await fetch("http://localhost:3002/roles");
@@ -33,64 +38,85 @@ export default function UserRoleManager() {
             setRoles([]);
         }
     }, []);
-    
-    useEffect(() => { 
+
+    useEffect(() => {
         fetchRoles();
         fetchUsers();
     }, []);
-    
-    
+
+
     const openModal = (user) => {
         setSelectedUser(user);
         setSelectedRoles([]);
         setStatusMsg({ text: "", type: "" });
     };
-    
+
     const closeModal = () => {
-        if (submitting) return;
         setSelectedUser(null);
         setSelectedRoles([]);
         setStatusMsg({ text: "", type: "" });
     };
-    
+
     const toggleRole = (roleId) => {
         const userRoleIds = (selectedUser?.roles || []).map((r) =>
             typeof r === "object" ? r._id : r
         );
-        if (userRoleIds.includes(roleId)) return;
+        if (userRoleIds.includes(roleId) && operType == operations.ASSIGN) return;
         setSelectedRoles((prev) =>
             prev.includes(roleId) ? prev.filter((r) => r !== roleId) : [...prev, roleId]
         );
     };
-    
+
     const handleSubmit = async () => {
         if (selectedRoles.length === 0) return;
-        setSubmitting(true);
         setStatusMsg({ text: "", type: "" });
         try {
-            await axios.post("http://localhost:3003/user/addRole", {
-                username: selectedUser.username,
-                roleArr: selectedRoles,
-            });
-            setStatusMsg({ text: "Roles assigned successfully!", type: "success" });
+            if (operType == operations.ASSIGN) {
+                await axios.post("http://localhost:3003/user/addRole", {
+                    username: selectedUser.username,
+                    roleArr: selectedRoles,
+                });
+                setStatusMsg({ text: "Roles assigned successfully!", type: "success" });
+            }
+            else if (operType == operations.REMOVE) {
+                await axios.delete("http://localhost:3003/user/clear", {
+                    data: {
+                        username: selectedUser.username,
+                        roleArr: selectedRoles,
+                    }
+                })
+                setStatusMsg({ text: "Roles removed successfully!", type: "success" });
+            }
             fetchUsers();
-            setTimeout(() => closeModal(), 1200);
+            closeModal();
         } catch (err) {
             setStatusMsg({
                 text: err.response?.data?.message || err.message || "Something went wrong.",
                 type: "error",
             });
-        } finally {
-            setSubmitting(false);
         }
     };
 
-    const handleClear = async ()=>{
-        try{
+    const clearRoles = async () => {
+        try {
+            await axios.delete("http://localhost:3003/user/clear", {
+                username: selectedUser.username,
+                roleArr: selectedRoles,
+            });
+            setStatusMsg({ text: "Roles removed successfully!", type: "success" });
+            fetchUsers();
+        }
+        catch (err) {
+            console.log(err)
+        }
+    }
+
+    const handleClear = async () => {
+        try {
             await axios.delete("http://localhost:3003/user/clearAll");
             fetchUsers()
         }
-        catch(err){
+        catch (err) {
             console.log(err)
         }
     }
@@ -111,10 +137,10 @@ export default function UserRoleManager() {
                     <div className="clear-btn" onClick={handleClear}>
                         Clear all roles
                     </div>
-                    
+
                     <div className="form-divider" />
-                    
-                    
+
+
                     {users.length === 0 ? (
                         <div className="state-box">No users found.</div>
                     ) : (
@@ -148,9 +174,17 @@ export default function UserRoleManager() {
                                         <td>
                                             <button
                                                 className="assign-btn"
-                                                onClick={() => openModal(user)}
+                                                onClick={() => { setOperType(operations.ASSIGN); openModal(user) }}
                                             >
-                                                + Assign Role
+                                                + Assign Roles
+                                            </button>
+                                        </td>
+                                        <td>
+                                            <button
+                                                className="remove-btn"
+                                                onClick={() => { setOperType(operations.REMOVE); openModal(user) }}
+                                            >
+                                                - Remove Roles
                                             </button>
                                         </td>
                                     </tr>
@@ -160,21 +194,31 @@ export default function UserRoleManager() {
                     )}
                 </div>
             </div>
-            
+
             {selectedUser && (
                 <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && closeModal()}>
                     <div className="modal">
                         <div className="modal-header">
-                            <h3>Assign Roles</h3>
-                            <p className="modal-subtitle">
-                                Adding roles to <span>{selectedUser.username}</span>
-                            </p>
+                            {
+                                operType == operations.ASSIGN ? <h3>Assign Roles</h3> :
+                                    <h3>Remove Roles</h3>
+                            }
+                            {
+                                operType == operations.ASSIGN ? <p className="modal-subtitle">
+                                    Adding roles to <span>{selectedUser.username}</span>
+                                </p> :
+                                    <p className="modal-subtitle">
+                                        Removing roles from <span>{selectedUser.username}</span>
+                                    </p>
+                            }
+
                         </div>
 
                         <div className="form-divider" />
-                        
 
-                        <div className="service-list">
+
+                        {operType == operations.ASSIGN ? <div className="service-list">
+
                             {roles.map((role) => {
                                 const alreadyAssigned = getUserRoleIds(selectedUser).includes(role._id);
                                 const isSelected = selectedRoles.includes(role._id);
@@ -209,6 +253,41 @@ export default function UserRoleManager() {
                                 );
                             })}
                         </div>
+                            :
+                            <div className="service-list">
+                                {roles.map((role) => {
+                                    const isAssigned = getUserRoleIds(selectedUser).includes(role._id);
+                                    const isSelected = selectedRoles.includes(role._id);
+
+                                    // Only show roles the user already has
+                                    if (!isAssigned) return null;
+
+                                    return (
+                                        <div
+                                            key={role._id}
+                                            className={`service-card ${isSelected ? "checked" : ""}`}
+                                            onClick={() => toggleRole(role._id)}
+                                        >
+                                            <div className="service-header">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    readOnly
+                                                />
+                                                <div>
+                                                    <div className="service-name">{role.name}</div>
+                                                    {role.description && (
+                                                        <div style={{ fontSize: 12, color: "#6b7280", marginTop: 2 }}>
+                                                            {role.description}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <span className="service-id">{role._id}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>}
 
 
                         {statusMsg.text && (
@@ -216,18 +295,25 @@ export default function UserRoleManager() {
                         )}
 
                         <div className="modal-actions">
-                            <button className="cancel-btn" onClick={closeModal} disabled={submitting}>
+                            <button className="cancel-btn" onClick={closeModal}>
                                 Cancel
                             </button>
-                            <button
-                                className="submit-btn"
-                                onClick={handleSubmit}
-                                disabled={submitting || selectedRoles.length === 0}
-                            >
-                                {submitting
-                                    ? "Assigning..."
-                                    : `Assign ${selectedRoles.length || ""} Role${selectedRoles.length !== 1 ? "s" : ""}`}
-                            </button>
+                            {
+                                operType == operations.ASSIGN ? <button
+                                    className="submit-btn"
+                                    onClick={handleSubmit}
+                                    disabled={selectedRoles.length === 0}
+                                >
+                                    {`Assign ${selectedRoles.length || ""} Role${selectedRoles.length !== 1 ? "s" : ""}`}
+                                </button> : <button
+                                    className="submit-btn"
+                                    onClick={handleSubmit}
+                                    disabled={selectedRoles.length === 0}
+                                >
+                                    {`Remove ${selectedRoles.length || ""} Role${selectedRoles.length !== 1 ? "s" : ""}`}
+                                </button>
+                            }
+
                         </div>
                     </div>
                 </div>
@@ -246,6 +332,10 @@ const styles = `
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
+    max-width:200px;
+    display:flex;
+    align-items: center;
+    justify-content: center;
 }
 .role-container {
     display: flex;
@@ -322,14 +412,32 @@ const styles = `
 .no-roles { font-size: 12px; color: #9ca3af; font-style: italic; }
 
 .assign-btn {
-    padding: 7px 14px; background: #07060d; color: white;
-    border: none; border-radius: 7px; font-family: 'DM Sans', sans-serif;
-    font-size: 12px; font-weight: 600; cursor: pointer;
-    transition: opacity 0.2s; white-space: nowrap;
+    padding: 7px; background: #165ab4; color: white;
+    border: none; 
+    border-radius: 7px; 
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; 
+    font-weight: 600; 
+    cursor: pointer;
+    transition: opacity 0.2s; 
+    white-space: nowrap;
 }
 .assign-btn:hover { opacity: 0.85; }
 
-.state-box { padding: 48px 0; text-align: center; color: #9ca3af; font-size: 14px; }
+.remove-btn {
+    padding: 7px; 
+    background: #b40d29; 
+    color: white;
+    border: none; border-radius: 7px; 
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600; 
+    cursor: pointer;
+    transition: opacity 0.2s; 
+    white-space: nowrap;
+}
+.remove-btn:hover { opacity: 0.85; }
+
+.state-box { padding: 30px 0; text-align: center; color: #9ca3af; font-size: 14px; }
 .spinner {
     width: 28px; height: 28px; border: 3px solid #e5e7eb;
     border-top-color: #090649; border-radius: 50%;

@@ -1,9 +1,9 @@
+
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+dotenv.config();
 const bcrypt = require("bcrypt");
 const userModel = require("../models/User");
-
-dotenv.config();
 
 const dummyUsers = [
     { name: "Alice Johnson", username: "alice_j" },
@@ -20,11 +20,11 @@ const dummyUsers = [
 
 const seed = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_DB_URI);
+        await mongoose.connect("mongodb+srv://aryanag2701_db_user:aryan@user-role.ra19zht.mongodb.net/User-Role");
         console.log("Connected to MongoDB");
-
+        await userModel.deleteMany({});
         const hashedPassword = await bcrypt.hash("password123", 10);
-
+        
         const users = dummyUsers.map((u) => ({
             ...u,
             password: hashedPassword,

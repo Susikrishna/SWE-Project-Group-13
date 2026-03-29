@@ -44,11 +44,11 @@ const addRoleToUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-
+        
         const ROLE_URL = "http://localhost:3002/roles";
         
         for (const roleId of roleArr) {
-
+            
             try {
                 await axios.get(`${ROLE_URL}/${roleId}`);
             } catch {
@@ -79,4 +79,40 @@ const clearAllRoles = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
-module.exports = { getUsers, addNewUser , addRoleToUser, clearAllRoles};
+
+
+const clearRolesForUser = async (req,res) =>{
+    try{
+        const {username,roleArr} = req.body;
+        console.log(username)
+        const user = await userModel.findOne({ username });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        if(roleArr.length ==0){
+            return res.status(404).json({error:"Empty Role array"});
+        }
+        
+        const ROLE_URL = "http://localhost:3002/roles";
+        for (const roleId of roleArr) {
+            try {
+                await axios.get(`${ROLE_URL}/${roleId}`);
+            } catch {
+                return res.status(404).json({ error: `Role ${roleId} not found` });
+            }
+        }
+        
+        for (const roleId of roleArr) {
+            if (!user.roles.includes(roleId)) {
+                return res.status(400).json({ error: `User does not have role ${roleId}` });
+            }
+        }
+
+        user.roles = user.roles.filter((role) => !roleArr.includes(role));
+        await user.save();
+        res.status(200).json({ message: "Roles removed successfully", user });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+}
+module.exports = { getUsers, addNewUser , addRoleToUser, clearAllRoles, clearRolesForUser};
