@@ -6,12 +6,12 @@ function RoleForm() {
     const [roleName, setRoleName] = useState("");
     const [isTemp, setIsTemp] = useState(false);
     const [expiresAt, setExpiresAt] = useState("");
-    
+
     const [microfrontends, setMicrofrontends] = useState([]);
     const [microservices, setMicroservices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
+
     // State for flattened permissions
     const [selectedPermissions, setSelectedPermissions] = useState(new Set());
     const [selectedMfes, setSelectedMfes] = useState(new Set());
@@ -28,7 +28,13 @@ function RoleForm() {
                 // Map MFEs
                 const mfes = mfeRes.data.map(m => ({
                     id: m.feature,
-                    label: m.name
+                    label: m.name,
+                    components: (m.components || []).map(c => ({
+                        name: c.name,
+                        route: c.route,
+                        componentKey: `${m.feature}::${c.route}` // unique key like permissionKey
+                    }))
+
                 }));
 
                 // Group API endpoints by service
@@ -59,21 +65,34 @@ function RoleForm() {
 
         fetchRegistries();
     }, []);
-    
+
     // Toggle for Microfrontends
-    const toggleMfe = (mfeId) => {
+    const toggleMfe = (mfeId, components) => {
+        const hasAny = components.some(c => selectedMfes.has(c.componentKey));
         setSelectedMfes(prev => {
             const next = new Set(prev);
-            if (next.has(mfeId)) next.delete(mfeId);
-            else next.add(mfeId);
+            if (hasAny) {
+                components.forEach(c => next.delete(c.componentKey));
+            } else {
+                components.forEach(c => next.add(c.componentKey));
+            }
             return next;
         });
     };
 
+    // Toggle individual component (mirrors togglePermission)
+    const toggleComponent = (componentKey) => {
+        setSelectedMfes(prev => {
+            const next = new Set(prev);
+            if (next.has(componentKey)) next.delete(componentKey);
+            else next.add(componentKey);
+            return next;
+        });
+    };
     // Toggle all permissions for a Microservice
     const toggleServiceExpand = (serviceId, permissions) => {
         const hasAny = permissions.some(p => selectedPermissions.has(p.permissionKey));
-        
+
         setSelectedPermissions(prev => {
             const next = new Set(prev);
             if (hasAny) {
@@ -96,7 +115,7 @@ function RoleForm() {
             return next;
         });
     };
-    
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -112,14 +131,14 @@ function RoleForm() {
             isTemp,
             ...(isTemp && { expiresAt }),
         };
-        
+
         try {
             // Post to the updated Role Service on Port 3002
             await axios.post("http://localhost:3002/roles", roleData, {
                 headers: { "Content-Type": "application/json" },
             });
             alert(`Role "${roleName}" created successfully!`);
-            
+
             // Reset Form
             setRoleName("");
             setIsTemp(false);
@@ -136,7 +155,7 @@ function RoleForm() {
             <style>{styles}</style>
             <div className="role-container">
                 <form className="role-form" onSubmit={handleSubmit}>
-                    
+
                     <div className="form-header">
                         <h2>Create Role</h2>
                     </div>
@@ -151,7 +170,7 @@ function RoleForm() {
                             required
                         />
                     </div>
-                    
+
                     <div className="form-divider" />
                     <p className="section-title">Microfrontend Access</p>
                     {loading ? (
@@ -163,22 +182,49 @@ function RoleForm() {
                     ) : (
                         <div className="service-list">
                             {microfrontends.map((item) => {
-                                const isChecked = selectedMfes.has(item.id);
+                                // ✅ fixed: use item not mfe, check componentKeys not item.id
+                                const hasAny = item.components.some(c => selectedMfes.has(c.componentKey));
                                 return (
-                                    <div key={item.id} className={`service-card ${isChecked ? "checked" : ""}`}>
+                                    <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
                                         <div
                                             className="service-header"
-                                            onClick={() => toggleMfe(item.id)}
+                                            // ✅ fixed: pass components to toggleMfe
+                                            onClick={() => toggleMfe(item.id, item.components)}
                                         >
-                                            <input type="checkbox" checked={isChecked} readOnly />
+                                            <input type="checkbox" checked={hasAny} readOnly />
                                             <span className="service-name">{item.label}</span>
                                         </div>
+                                        {/* ✅ fixed: use item not mfe */}
+                                        {hasAny && item.components.length > 0 && (
+                                            <div className="actions-list">
+                                                <p className="actions-title">Components:</p>
+                                                <div className="actions-grid">
+                                                    {item.components.map((comp) => {
+                                                        const isSelected = selectedMfes.has(comp.componentKey);
+                                                        return (
+                                                            <div
+                                                                key={comp.componentKey}
+                                                                className={`action-chip ${isSelected ? "selected" : ""}`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    toggleComponent(comp.componentKey);
+                                                                }}
+                                                            >
+                                                                <input type="checkbox" checked={isSelected} readOnly />
+                                                                <span className="action-name">{comp.name} :&nbsp;</span>
+                                                                <span className="action-desc">{comp.route}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
                         </div>
                     )}
-                    
+
                     <div className="form-divider" />
                     <p className="section-title">Microservice Access</p>
                     {loading ? (
@@ -254,7 +300,7 @@ function RoleForm() {
                             </div>
                         </div>
                     )}
-                    
+
                     <button
                         className="submit-btn"
                         type="submit"
@@ -262,7 +308,7 @@ function RoleForm() {
                     >
                         Create Role
                     </button>
-                
+
                 </form>
             </div>
         </>
