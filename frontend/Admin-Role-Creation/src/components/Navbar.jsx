@@ -1,10 +1,10 @@
 import { useNavigate, useLocation } from "react-router-dom";
 
 const routes = [
-    { id: "", path: "/", label: "Home", icon: "⌂" },
-    { id: "newRole", path: "/newRole", label: "Create Role", icon: "✦" },
-    { id: "role", path: "/role", label: "All Roles", icon: "◈" },
-    { id: "addRole", path: "/userToRole", label: "Add Roles", icon: "-" },
+    { id: "", path: "/", label: "Home" },
+    { id: "newRole", path: "/newRole", label: "Create Role" },
+    { id: "role", path: "/role", label: "All Roles" },
+    { id: "addRole", path: "/userToRole", label: "Assign Roles" },
 ];
 
 function Navbar() {

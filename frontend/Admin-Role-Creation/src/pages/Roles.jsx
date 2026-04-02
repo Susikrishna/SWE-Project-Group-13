@@ -5,7 +5,15 @@ const serverUrl = import.meta.env.VITE_SERVER_URL
 function Roles() {
     const [roles, setRoles] = useState([]);
     const [error, setError] = useState(null);
-    
+    const [name,setName] = useState("");
+    const [editingRole, setEditingRole] = useState(null);
+    const [microfrontends, setMicrofrontends] = useState([]);
+    const [microservices, setMicroservices] = useState([]);
+    const [editDescription, setEditDescription] = useState("");
+    const [editIsTemp, setEditIsTemp] = useState(false);
+    const [editExpiresAt, setEditExpiresAt] = useState("");
+    const [editSelectedPermissions, setEditSelectedPermissions] = useState(new Set());
+    const [editSelectedMfes, setEditSelectedMfes] = useState(new Set());
     const getRoles = async () => {
         try {
             const response = await axios.get("http://localhost:3002/roles");
@@ -14,13 +22,143 @@ function Roles() {
             setError("Failed to fetch roles.");
         }
     };
+    const openEditModal = (role) => {
+        setName(role.name);
+        setEditingRole(role);
+        setEditDescription(role.description || "");
+        setEditIsTemp(role.isTemp || false);
+        setEditExpiresAt(role.expiresAt ? role.expiresAt.split("T")[0] : "");
+        setEditSelectedPermissions(new Set(role.permissions || []));
+        setEditSelectedMfes(new Set(role.mfeAccess || []));
+    };
     
     useEffect(() => {
         getRoles();
     }, []);
+    useEffect(() => {
+        const fetchRegistries = async () => {
+            try {
+                const [mfeRes, svcRes] = await Promise.all([
+                    axios.get("http://localhost:3001/registry/mfes"),
+                    axios.get("http://localhost:3001/registry/services")
+                ]);
+                
+                const mfes = mfeRes.data.map(m => ({
+                    id: m.feature,
+                    label: m.name,
+                    components: (m.components || []).map(c => ({
+                        name: c.name,
+                        route: c.route,
+                        componentKey: `${m.feature}::${c.route}`
+                    }))
+                
+                }));
+                
+                const groupedServices = {};
+                svcRes.data.forEach(api => {
+                    if (!groupedServices[api.service]) {
+                        groupedServices[api.service] = {
+                            id: api.service,
+                            label: api.service.toUpperCase(),
+                            permissions: []
+                        };
+                    }
+                    groupedServices[api.service].permissions.push({
+                        resource: api.resource,
+                        action: api.action,
+                        permissionKey: api.permissionKey
+                    });
+                });
+
+                setMicrofrontends(mfes);
+                setMicroservices(Object.values(groupedServices));
+            } catch (err) {
+                setError("Failed to load services. Please try again.");
+            }
+        };
+        
+        fetchRegistries();
+    }, []);
+
+    const closeEditModal = () => {
+        setEditingRole(null);
+    };
+    
+    const toggleMfe = (components) => {
+        const hasAny = components.some(c => editSelectedMfes.has(c.componentKey));
+        setEditSelectedMfes(prev => {
+            const next = new Set(prev);
+            if (hasAny) {
+                components.forEach(c => next.delete(c.componentKey));
+            } else {
+                components.forEach(c => next.add(c.componentKey));
+            }
+            return next;
+        });
+    };
+
+    const toggleComponent = (componentKey) => {
+        setEditSelectedMfes(prev => {
+            const next = new Set(prev);
+            if (next.has(componentKey)) next.delete(componentKey);
+            else next.add(componentKey);
+            return next;
+        });
+    };
+    
+    const toggleService = (permissions) => {
+        const hasAny = permissions.some(p => editSelectedPermissions.has(p.permissionKey));
+        setEditSelectedPermissions(prev => {
+            const next = new Set(prev);
+            if (hasAny) {
+                permissions.forEach(p => next.delete(p.permissionKey));
+            } else {
+                permissions.forEach(p => next.add(p.permissionKey));
+            }
+            return next;
+        });
+    };
+
+    const togglePermission = (permissionKey) => {
+        setEditSelectedPermissions(prev => {
+            const next = new Set(prev);
+            if (next.has(permissionKey)) next.delete(permissionKey);
+            else next.add(permissionKey);
+            return next;
+        });
+    };
+    
+    const handleDelete = async(roleId) =>{
+        try{
+            const response = await axios.delete("http://localhost:3002/roles",{
+                data:{roleId:roleId}
+            });
+            getRoles()
+        }catch(err){
+            setError("Cannot delete Role")
+        }
+    }
+    
+    const handleSubmit = async () => {
+        try {
+            await axios.put(`http://localhost:3002/roles`, {
+                roleId: editingRole._id,
+                name: name,
+                description: editDescription,
+                permissions: Array.from(editSelectedPermissions),
+                mfeAccess: Array.from(editSelectedMfes),
+                isTemp: editIsTemp,
+                ...(editIsTemp && { expiresAt: editExpiresAt }),
+            });
+            closeEditModal();
+            getRoles();
+        } catch (err) {
+            setError("Cannot update Role");
+        }
+    };
     
     const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString();
-
+    
     return (
         <div style={{ minHeight: "120vh", background: "#f0f2f9" }}>
             <Navbar />
@@ -30,7 +168,7 @@ function Roles() {
                     <h1 className="roles-title">All Roles</h1>
                     <button className="refresh-btn" onClick={getRoles}>↻ Refresh</button>
                 </div>
-
+                
                 {error && <div className="status-msg error">{error}</div>}
                 {!error && roles.length === 0 && (
                     <div className="status-msg">No roles found.</div>
@@ -42,19 +180,19 @@ function Roles() {
                             <div className="role-card-header">
                                 <span className="role-name">{role.name}</span> 
                                 {role.isTemp && <span className="badge badge-temp">Temporary</span>} 
+                                <button className="edit-button" onClick={() => openEditModal(role)}>Edit</button>
+                                <button className="del-button" onClick={() => handleDelete(role._id)}>✕</button>
                             </div>
-                            
                             {role.description && (
                                 <div className="role-description">{role.description}</div>
                             )}
-
+                            
                             {role.isTemp && role.expiresAt && (
                                 <div className="role-dates">
-                                    <span>📅 Expires: {formatDate(role.expiresAt)}</span> 
+                                    <span> Expires: {formatDate(role.expiresAt)}</span> 
                                 </div>
                             )}
-
-                            {/* Section for API Permissions (Linear Format) */}
+                            
                             <div className="role-section">
                                 <div className="section-label">API Permissions</div>
                                 <div className="tag-list">
@@ -67,8 +205,7 @@ function Roles() {
                                     )}
                                 </div>
                             </div>
-
-                            {/* Section for Microfrontend Access */}
+                            
                             <div className="role-section">
                                 <div className="section-label">MFE Access</div>
                                 <div className="tag-list">
@@ -85,6 +222,153 @@ function Roles() {
                     ))}
                 </div>
             </div>
+            {editingRole && (
+                <div className="modal-overlay" onClick={closeEditModal}>
+                    <div className="modal" onClick={(e) => e.stopPropagation()}>
+
+                        <div className="modal-header">
+                            <h2>Edit Role</h2>
+                            <button className="modal-close" onClick={closeEditModal}>✕</button>
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Role Name</label>
+                            {name}
+                        </div>
+                        
+                        <div className="form-group">
+                            <label>Description</label>
+                            <input
+                                type="text"
+                                value={editDescription}
+                                onChange={(e) => setEditDescription(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="form-divider" />
+                        
+                        <p className="section-title">Microfrontend Access</p>
+                        { microfrontends.length === 0 ? (
+                            <p className="status-text">No microfrontends registered.</p>
+                        ) : (
+                            <div className="service-list">
+                                {microfrontends.map((item) => {
+                                    const hasAny = item.components.some(c => editSelectedMfes.has(c.componentKey));
+                                    return (
+                                        <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
+                                            <div className="service-header" onClick={() => toggleMfe(item.components)}>
+                                                <input type="checkbox" checked={hasAny} readOnly />
+                                                <span className="service-name">{item.label}</span>
+                                            </div>
+                                            {hasAny && item.components.length > 0 && (
+                                                <div className="actions-list">
+                                                    <p className="actions-title">Components:</p>
+                                                    <div className="actions-grid">
+                                                        {item.components.map((comp) => {
+                                                            const isSelected = editSelectedMfes.has(comp.componentKey);
+                                                            return (
+                                                                <div
+                                                                    key={comp.componentKey}
+                                                                    className={`action-chip ${isSelected ? "selected" : ""}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        toggleComponent(comp.componentKey);
+                                                                    }}
+                                                                >
+                                                                    <input type="checkbox" checked={isSelected} readOnly />
+                                                                    <span className="action-name">{comp.name} :&nbsp;</span>
+                                                                    <span className="action-desc">{comp.route}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <div className="form-divider" />
+                        
+                        <p className="section-title">Microservice Access</p>
+                        { microservices.length === 0 ? (
+                            <p className="status-text">No microservices registered.</p>
+                        ) : (
+                            <div className="service-list">
+                                {microservices.map((item) => {
+                                    const hasAny = item.permissions.some(p => editSelectedPermissions.has(p.permissionKey));
+                                    return (
+                                        <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
+                                            <div className="service-header" onClick={() => toggleService(item.permissions)}>
+                                                <input type="checkbox" checked={hasAny} readOnly />
+                                                <span className="service-name">{item.label}</span>
+                                            </div>
+                                            {hasAny && (
+                                                <div className="actions-list">
+                                                    <p className="actions-title">Resource List:</p>
+                                                    <div className="actions-grid">
+                                                        {item.permissions.map((perm) => {
+                                                            const isSelected = editSelectedPermissions.has(perm.permissionKey);
+                                                            return (
+                                                                <div
+                                                                    key={perm.permissionKey}
+                                                                    className={`action-chip ${isSelected ? "selected" : ""}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        togglePermission(perm.permissionKey);
+                                                                    }}
+                                                                >
+                                                                    <input type="checkbox" checked={isSelected} readOnly />
+                                                                    <span className="action-name">{perm.resource} :&nbsp;</span>
+                                                                    <span className="action-desc">{perm.action}</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        <div className="form-divider" />
+                        
+                        <div
+                            className={`permission-item ${editIsTemp ? "checked" : ""}`}
+                            onClick={() => setEditIsTemp(!editIsTemp)}
+                        >
+                            <input type="checkbox" checked={editIsTemp} readOnly />
+                            <label>Is the Role Temporary?</label>
+                        </div>
+
+                        {editIsTemp && (
+                            <div className="form-group" style={{ marginTop: "10px" }}>
+                                <label>Expiration Date</label>
+                                <input
+                                    type="date"
+                                    value={editExpiresAt}
+                                    onChange={(e) => setEditExpiresAt(e.target.value)}
+                                    required
+                                />
+                            </div>
+                        )}
+                        
+                        <div className="modal-footer">
+                            <button className="cancel-btn" onClick={closeEditModal}>Cancel</button>
+                            <button
+                                className="submit-btn"
+                                onClick={handleSubmit}
+                            >
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -99,6 +383,164 @@ font-family: 'DM Sans', sans-serif;
 max-width: 1100px;
 margin: 0 auto;
 }
+.card-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+}
+
+.edit-button {
+    background: #f0f2f9;
+    color: #4f46e5;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid #e4e7f0;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.15s;
+}
+
+.edit-button:hover { background: #eef2ff; }
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px;
+    width: 480px;
+    max-width: 90vw;
+    max-height: 85vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0d0a41;
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #6b7280;
+}
+
+.modal-close:hover { color: #d01d1d; }
+
+.modal .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal .form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal .form-group input {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #e4e7f0;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+}
+
+.modal .form-group input:focus { border-color: #4f46e5; }
+
+.modal .permission-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #e4e7f0;
+    cursor: pointer;
+}
+
+.modal .permission-item.checked {
+    background: #eef2ff;
+    border-color: #4f46e5;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.cancel-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid #e4e7f0;
+    background: #fff;
+    color: #6b7280;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+}
+
+.cancel-btn:hover { background: #f9fafb; }
+
+.submit-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: #4f46e5;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+}
+
+.submit-btn:hover { background: #4338ca; }
+
+.del-button {
+    background: #d01d1d;
+    color: #ffffff;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    margin-left: auto;
+    line-height: 1;
+    transition: background 0.15s;
+}
+
+.del-button:hover {
+    background: #b01515;
+}
+
 .roles-header {
 display: flex;
 align-items: center;

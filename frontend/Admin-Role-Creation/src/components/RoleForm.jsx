@@ -6,7 +6,7 @@ function RoleForm() {
     const [roleName, setRoleName] = useState("");
     const [isTemp, setIsTemp] = useState(false);
     const [expiresAt, setExpiresAt] = useState("");
-
+    
     const [microfrontends, setMicrofrontends] = useState([]);
     const [microservices, setMicroservices] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -24,20 +24,18 @@ function RoleForm() {
                     axios.get("http://localhost:3001/registry/mfes"),
                     axios.get("http://localhost:3001/registry/services")
                 ]);
-
-                // Map MFEs
+                
                 const mfes = mfeRes.data.map(m => ({
                     id: m.feature,
                     label: m.name,
                     components: (m.components || []).map(c => ({
                         name: c.name,
                         route: c.route,
-                        componentKey: `${m.feature}::${c.route}` // unique key like permissionKey
+                        componentKey: `${m.feature}::${c.route}`
                     }))
 
                 }));
-
-                // Group API endpoints by service
+                
                 const groupedServices = {};
                 svcRes.data.forEach(api => {
                     if (!groupedServices[api.service]) {
@@ -53,7 +51,7 @@ function RoleForm() {
                         permissionKey: api.permissionKey
                     });
                 });
-
+                
                 setMicrofrontends(mfes);
                 setMicroservices(Object.values(groupedServices));
             } catch (err) {
@@ -65,8 +63,7 @@ function RoleForm() {
 
         fetchRegistries();
     }, []);
-
-    // Toggle for Microfrontends
+    
     const toggleMfe = (mfeId, components) => {
         const hasAny = components.some(c => selectedMfes.has(c.componentKey));
         setSelectedMfes(prev => {
@@ -79,8 +76,7 @@ function RoleForm() {
             return next;
         });
     };
-
-    // Toggle individual component (mirrors togglePermission)
+    
     const toggleComponent = (componentKey) => {
         setSelectedMfes(prev => {
             const next = new Set(prev);
@@ -89,24 +85,21 @@ function RoleForm() {
             return next;
         });
     };
-    // Toggle all permissions for a Microservice
+
     const toggleServiceExpand = (serviceId, permissions) => {
         const hasAny = permissions.some(p => selectedPermissions.has(p.permissionKey));
 
         setSelectedPermissions(prev => {
             const next = new Set(prev);
             if (hasAny) {
-                // If currently checked, uncheck all
                 permissions.forEach(p => next.delete(p.permissionKey));
             } else {
-                // If unchecked, check all
                 permissions.forEach(p => next.add(p.permissionKey));
             }
             return next;
         });
     };
 
-    // Toggle a specific individual API permission
     const togglePermission = (permissionKey) => {
         setSelectedPermissions(prev => {
             const next = new Set(prev);
@@ -115,7 +108,7 @@ function RoleForm() {
             return next;
         });
     };
-
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -133,13 +126,11 @@ function RoleForm() {
         };
 
         try {
-            // Post to the updated Role Service on Port 3002
             await axios.post("http://localhost:3002/roles", roleData, {
                 headers: { "Content-Type": "application/json" },
             });
             alert(`Role "${roleName}" created successfully!`);
-
-            // Reset Form
+            
             setRoleName("");
             setIsTemp(false);
             setExpiresAt("");
@@ -155,11 +146,11 @@ function RoleForm() {
             <style>{styles}</style>
             <div className="role-container">
                 <form className="role-form" onSubmit={handleSubmit}>
-
+                    
                     <div className="form-header">
                         <h2>Create Role</h2>
                     </div>
-
+                    
                     <div className="form-group">
                         <label>Role Name</label>
                         <input
@@ -170,7 +161,7 @@ function RoleForm() {
                             required
                         />
                     </div>
-
+                    
                     <div className="form-divider" />
                     <p className="section-title">Microfrontend Access</p>
                     {loading ? (
@@ -182,19 +173,16 @@ function RoleForm() {
                     ) : (
                         <div className="service-list">
                             {microfrontends.map((item) => {
-                                // ✅ fixed: use item not mfe, check componentKeys not item.id
                                 const hasAny = item.components.some(c => selectedMfes.has(c.componentKey));
                                 return (
                                     <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
                                         <div
                                             className="service-header"
-                                            // ✅ fixed: pass components to toggleMfe
                                             onClick={() => toggleMfe(item.id, item.components)}
                                         >
                                             <input type="checkbox" checked={hasAny} readOnly />
                                             <span className="service-name">{item.label}</span>
                                         </div>
-                                        {/* ✅ fixed: use item not mfe */}
                                         {hasAny && item.components.length > 0 && (
                                             <div className="actions-list">
                                                 <p className="actions-title">Components:</p>
