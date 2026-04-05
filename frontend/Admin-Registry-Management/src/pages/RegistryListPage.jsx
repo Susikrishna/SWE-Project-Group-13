@@ -1,157 +1,85 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { styles } from "../styles/registryTheme";
-import { fetchMicroservices, fetchMicrofrontends } from "../services/registryApi";
+import { fetchMicroservices, fetchMicrofrontends, searchMicroservices, searchMicrofrontends } from "../services/registryApi";
+import RegistryCard from "../components/RegistryCard";
+import EditRegistryModal from "../components/EditRegistryModal";
 
 const MAX_SEARCH_RESULTS = 10;
 const DEFAULT_DISPLAY_COUNT = 10;
 
-// Method badge colors
-const methodColors = {
-  GET: { bg: "#dcfce7", text: "#166534", border: "#bbf7d0" },
-  POST: { bg: "#dbeafe", text: "#1e40af", border: "#bfdbfe" },
-  PUT: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  PATCH: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  DELETE: { bg: "#fee2e2", text: "#991b1b", border: "#fecaca" },
-};
-
-const Badge = ({ label, color = "#64748b", bg = "#f1f5f9", border = "#e2e8f0" }) => (
-  <span
-    style={{
-      display: "inline-block",
-      padding: "3px 10px",
-      fontSize: "11px",
-      fontWeight: 700,
-      letterSpacing: "0.5px",
-      borderRadius: "8px",
-      background: bg,
-      color,
-      border: `1px solid ${border}`,
-      textTransform: "uppercase",
-      fontFamily: "'DM Mono', monospace",
-    }}
-  >
-    {label}
-  </span>
-);
-
-const RegistryCard = ({ item }) => {
-  const isApi = item._type === "API";
-  const mc = isApi ? methodColors[item.method] || methodColors.GET : null;
-
-  return (
-    <div style={styles.registryCard}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
-        <Badge
-          label={isApi ? "API" : "MFE"}
-          bg={isApi ? "#ede9fe" : "#fce7f3"}
-          color={isApi ? "#5b21b6" : "#9d174d"}
-          border={isApi ? "#ddd6fe" : "#fbcfe8"}
-        />
-        {isApi && mc && <Badge label={item.method} bg={mc.bg} color={mc.text} border={mc.border} />}
-        <span style={{ fontSize: "17px", fontWeight: 700, color: "#0f172a", letterSpacing: "-0.3px" }}>
-          {isApi ? item.service : item.name}
-        </span>
-      </div>
-
-      {isApi ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <div style={styles.registryDetail}>
-            <span style={styles.registryDetailLabel}>Route</span>
-            <code style={styles.registryCode}>{item.basePath}{item.route}</code>
-          </div>
-          <div style={styles.registryDetail}>
-            <span style={styles.registryDetailLabel}>Permission</span>
-            <code style={styles.registryCode}>{item.permissionKey}</code>
-          </div>
-          {item.description && (
-            <div style={styles.registryDetail}>
-              <span style={styles.registryDetailLabel}>Description</span>
-              <span style={{ color: "#475569", fontSize: "13px" }}>{item.description}</span>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <div style={styles.registryDetail}>
-            <span style={styles.registryDetailLabel}>Feature</span>
-            <code style={styles.registryCode}>{item.feature}</code>
-          </div>
-          <div style={styles.registryDetail}>
-            <span style={styles.registryDetailLabel}>Route</span>
-            <code style={styles.registryCode}>{item.route}</code>
-          </div>
-          <div style={styles.registryDetail}>
-            <span style={styles.registryDetailLabel}>Module</span>
-            <code style={styles.registryCode}>{item.module}</code>
-          </div>
-          {item.description && (
-            <div style={styles.registryDetail}>
-              <span style={styles.registryDetailLabel}>Description</span>
-              <span style={{ color: "#475569", fontSize: "13px" }}>{item.description}</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
 const RegistryListPage = () => {
-  const [allItems, setAllItems] = useState([]);
+  const [displayedItems, setDisplayedItems] = useState([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Used to force reload after edit
 
+  // Debouncing search input
   useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(search.trim());
+    }, 400); // 400ms delay
+    return () => clearTimeout(handler);
+  }, [search]);
+
+  // Loading data from server
+  useEffect(() => {
+    let isMounted = true;
     const loadData = async () => {
       try {
         setLoading(true);
-        const [apis, mfes] = await Promise.all([fetchMicroservices(), fetchMicrofrontends()]);
+        setError(null);
+        let apisRes, mfesRes;
 
-        const apiItems = (Array.isArray(apis) ? apis : apis?.data || []).map((a) => ({ ...a, _type: "API", _sortKey: (a.service || "").toLowerCase() }));
-        const mfeItems = (Array.isArray(mfes) ? mfes : mfes?.data || []).map((m) => ({ ...m, _type: "MFE", _sortKey: (m.name || m.feature || "").toLowerCase() }));
+        if (debouncedSearch) {
+          // If search active, use the server-side search APIs
+          const [apis, mfes] = await Promise.all([
+            searchMicroservices(debouncedSearch),
+            searchMicrofrontends(debouncedSearch)
+          ]);
+          apisRes = apis;
+          mfesRes = mfes;
+        } else {
+          // Otherwise, fetch initial set
+          const [apis, mfes] = await Promise.all([fetchMicroservices(), fetchMicrofrontends()]);
+          apisRes = apis;
+          mfesRes = mfes;
+        }
 
-        const combined = [...apiItems, ...mfeItems].sort((a, b) => a._sortKey.localeCompare(b._sortKey));
-        setAllItems(combined);
+        if (!isMounted) return;
+
+        const apiItems = (Array.isArray(apisRes) ? apisRes : apisRes?.data || []).map((a) => ({ ...a, _type: "API", _sortKey: (a.service || "").toLowerCase() }));
+        const mfeItems = (Array.isArray(mfesRes) ? mfesRes : mfesRes?.data || []).map((m) => ({ ...m, _type: "MFE", _sortKey: (m.name || m.feature || "").toLowerCase() }));
+
+        let combined = [...apiItems, ...mfeItems].sort((a, b) => a._sortKey.localeCompare(b._sortKey));
+        
+        // Limit to desired count
+        combined = combined.slice(0, debouncedSearch ? MAX_SEARCH_RESULTS : DEFAULT_DISPLAY_COUNT);
+        
+        setDisplayedItems(combined);
       } catch (err) {
-        setError(err.message || "Failed to load registry data");
+        if (isMounted) setError(err.message || "Failed to load registry data");
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+
     loadData();
-  }, []);
+    return () => { isMounted = false; };
+  }, [debouncedSearch, refreshTrigger]);
 
-  const filteredItems = useMemo(() => {
-    if (!search.trim()) return allItems.slice(0, DEFAULT_DISPLAY_COUNT);
+  const isSearching = debouncedSearch.length > 0;
 
-    const query = search.toLowerCase().trim();
-    const matched = allItems.filter((item) => {
-      if (item._type === "API") {
-        return (
-          (item.service || "").toLowerCase().includes(query) ||
-          (item.basePath || "").toLowerCase().includes(query) ||
-          (item.route || "").toLowerCase().includes(query) ||
-          (item.method || "").toLowerCase().includes(query) ||
-          (item.permissionKey || "").toLowerCase().includes(query) ||
-          (item.description || "").toLowerCase().includes(query) ||
-          (item.resource || "").toLowerCase().includes(query)
-        );
-      } else {
-        return (
-          (item.name || "").toLowerCase().includes(query) ||
-          (item.feature || "").toLowerCase().includes(query) ||
-          (item.route || "").toLowerCase().includes(query) ||
-          (item.module || "").toLowerCase().includes(query) ||
-          (item.description || "").toLowerCase().includes(query)
-        );
-      }
-    });
+  const handleEdit = (item) => {
+    setEditingItem(item);
+  };
 
-    return matched.slice(0, MAX_SEARCH_RESULTS);
-  }, [search, allItems]);
-
-  const isSearching = search.trim().length > 0;
+  const handleSave = () => {
+    setEditingItem(null);
+    setRefreshTrigger(prev => prev + 1); // Triggers the useEffect to fetch fresh data
+  };
 
   return (
     <div style={styles.page}>
@@ -198,14 +126,14 @@ const RegistryListPage = () => {
               </button>
             )}
           </div>
-          {isSearching && (
+          {isSearching && !loading && (
             <p style={styles.resultCount}>
-              Showing top {filteredItems.length} of {allItems.length} results
+              Showing top {displayedItems.length} matching results from server
             </p>
           )}
-          {!isSearching && allItems.length > DEFAULT_DISPLAY_COUNT && (
+          {!isSearching && !loading && (
             <p style={styles.resultCount}>
-              Showing {filteredItems.length} of {allItems.length} components — use search to find more
+              Showing default {displayedItems.length} components — use search to find specific items
             </p>
           )}
         </div>
@@ -214,26 +142,36 @@ const RegistryListPage = () => {
         {loading ? (
           <div style={styles.stateBox}>
             <div style={styles.spinner}></div>
-            <p style={{ color: "#64748b", fontSize: "14px", marginTop: "16px" }}>Loading registry...</p>
+            <p style={{ color: "#64748b", fontSize: "14px", marginTop: "16px" }}>
+              {isSearching ? "Searching registry..." : "Loading registry..."}
+            </p>
           </div>
         ) : error ? (
           <div style={{ ...styles.stateBox, borderColor: "#fecaca", background: "rgba(254,226,226,0.3)" }}>
             <p style={{ color: "#dc2626", fontSize: "14px", fontWeight: 600 }}>⚠ {error}</p>
           </div>
-        ) : filteredItems.length === 0 ? (
+        ) : displayedItems.length === 0 ? (
           <div style={styles.stateBox}>
             <p style={{ color: "#94a3b8", fontSize: "15px", fontWeight: 500 }}>
-              {isSearching ? "No results match your search." : "No registered services found."}
+              {isSearching ? "No results match your search query." : "No registered services found."}
             </p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {filteredItems.map((item, index) => (
-              <RegistryCard key={item._id || `${item._type}-${index}`} item={item} />
+            {displayedItems.map((item, index) => (
+              <RegistryCard key={item._id || `${item._type}-${index}`} item={item} onEdit={handleEdit} />
             ))}
           </div>
         )}
       </div>
+
+      {editingItem && (
+        <EditRegistryModal 
+           item={editingItem} 
+           onClose={() => setEditingItem(null)} 
+           onSave={handleSave} 
+        />
+      )}
 
       {/* Spinner keyframes */}
       <style>{`

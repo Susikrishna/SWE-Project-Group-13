@@ -7,9 +7,10 @@ export const styles = {
     width: "100%",
     height: "100vh",
     background:
-      "radial-gradient(circle at center, rgba(255,255,255,0.8), transparent 60%)",
-    filter: "blur(80px)",
+      "radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%)",
     animation: "waveMove 15s ease-in-out infinite",
+    willChange: "transform",
+    transform: "translateZ(0)",
     zIndex: 0,
   },
   wave2: {
@@ -19,9 +20,10 @@ export const styles = {
     width: "100%",
     height: "100vh",
     background:
-      "radial-gradient(circle at center, rgba(226, 232, 240, 0.6), transparent 60%)",
-    filter: "blur(80px)",
+      "radial-gradient(circle at center, rgba(226, 232, 240, 0.6) 0%, rgba(226, 232, 240, 0) 60%)",
     animation: "waveMove2 20s ease-in-out infinite",
+    willChange: "transform",
+    transform: "translateZ(0)",
     zIndex: 0,
   },
 
@@ -55,8 +57,9 @@ export const styles = {
     background: "linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.4) 100%)", 
     
     // 🌟 2. Heavier Frosting
-    backdropFilter: "blur(40px)",
-    WebkitBackdropFilter: "blur(40px)",
+    backdropFilter: "blur(16px)", // Reduced from 40px to improve framerate
+    WebkitBackdropFilter: "blur(16px)",
+    transform: "translateZ(0)", // Force hardware acceleration
     
     // Delicate physical border
     border: "1px solid rgba(255, 255, 255, 0.5)",
