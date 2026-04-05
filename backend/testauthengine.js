@@ -14,7 +14,7 @@ function generateToken() {
 
     const tokenLine = output.split("\n").find(line => line.startsWith("Bearer"));
     const token = tokenLine.split(" ")[1];
-
+    
     return token;
 }
 

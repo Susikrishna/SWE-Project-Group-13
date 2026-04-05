@@ -13,6 +13,15 @@ const mfeSchema = new mongoose.Schema(
 
     // The base URL path where this MFE is mounted in the browser (e.g., '/settings')
     route: { type: String, required: true }, 
+
+    // component routes
+    components: [
+      {
+        name: { type: String, required: true },
+        route: { type: String, required: true },
+        isActive: { type: Boolean, default: true },
+      }
+    ],
     
     // The CDN or hosted URL serving the remote javascript (e.g., 'https://cdn.com/user.js')
     remoteUrl: { type: String, required: true }, 

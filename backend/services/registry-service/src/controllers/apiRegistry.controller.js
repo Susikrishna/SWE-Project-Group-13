@@ -52,20 +52,20 @@ const createBulkApis = async (req, res) => {
   try {
     // basePath can be provided once for the whole service, or inside each API object
     const { service, basePath, apis } = req.body; 
-
+    
     if (!service || !Array.isArray(apis) || apis.length === 0) {
       return res.status(400).json({ error: "Service identifier and an array of APIs are required" });
     }
-
+    
     const normalizedService = service.trim().toLowerCase();
-
+    
     const documents = apis
       // Ensure we have a basePath (either from the top level or the api item)
       .filter(api => (api.basePath || basePath) && api.route && api.method && api.resource && api.action)
       .map(api => {
         const resource = api.resource.trim().toLowerCase();
         const action = api.action.trim().toLowerCase();
-
+        
         return {
           service: normalizedService,
           basePath: (api.basePath || basePath).trim(),
@@ -79,20 +79,35 @@ const createBulkApis = async (req, res) => {
           isActive: api.isActive ?? true,
         };
       });
-
+    
     if (documents.length === 0) {
       return res.status(400).json({ error: "No valid API configurations provided" });
     }
 
     // ordered: false ensures the DB skips existing routes and inserts the rest without crashing
     const result = await ApiRegistry.insertMany(documents, { ordered: false });
-
+    
     res.status(201).json({
       message: "Bulk API registration complete",
       insertedCount: result.length,
       data: result,
     });
   } catch (err) {
+    if (err.code === 11000 || err.name === "BulkWriteError") {
+      const inserted = err.result?.nInserted ?? 0;
+      const writeErrors = err.writeErrors?.map(e => ({
+        index: e.index,
+        message: e.errmsg,
+      })) ?? [];
+
+      return res.status(207).json({  // 207 = Multi-Status (partial success)
+        message: "Bulk insert partially completed",
+        insertedCount: inserted,
+        skippedCount: writeErrors.length,
+        errors: writeErrors,
+      });
+    }
+
     res.status(500).json({ error: err.message });
   }
 };
@@ -103,6 +118,7 @@ const createBulkApis = async (req, res) => {
 const getApis = async (req, res) => {
   try {
     const apis = await ApiRegistry.find().sort({ createdAt: -1 });
+    console.log(apis)
     res.json(apis);
   } catch (err) {
     res.status(500).json({ error: err.message });
