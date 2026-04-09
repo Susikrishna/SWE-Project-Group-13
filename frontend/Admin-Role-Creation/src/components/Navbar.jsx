@@ -5,6 +5,7 @@ const routes = [
     { id: "newRole", path: "/newRole", label: "Create Role" },
     { id: "role", path: "/role", label: "All Roles" },
     { id: "addRole", path: "/userToRole", label: "Assign Roles" },
+    { id: "logs", path: "/logs", label: "Logs"},
 ];
 
 function Navbar() {
