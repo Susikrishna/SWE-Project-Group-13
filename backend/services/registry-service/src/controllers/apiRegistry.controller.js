@@ -118,7 +118,6 @@ const createBulkApis = async (req, res) => {
 const getApis = async (req, res) => {
   try {
     const apis = await ApiRegistry.find().sort({ createdAt: -1 });
-    console.log(apis)
     res.json(apis);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -1,0 +1,101 @@
+// ── Layout & Page ─────────────────────────────────────────────────────────────
+export const layout = {
+  page: {
+    width: "100%",
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "flex-start",
+    background: "#f8fafc",
+    overflowX: "hidden",
+    position: "relative",
+    fontFamily: "'DM Sans', system-ui, sans-serif",
+    color: "#0f172a",
+  },
+
+  wave: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100vh",
+    background:
+      "radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%)",
+    animation: "waveMove 15s ease-in-out infinite",
+    willChange: "transform",
+    transform: "translateZ(0)",
+    zIndex: 0,
+  },
+
+  wave2: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100vh",
+    background:
+      "radial-gradient(circle at center, rgba(226, 232, 240, 0.6) 0%, rgba(226, 232, 240, 0) 60%)",
+    animation: "waveMove2 20s ease-in-out infinite",
+    willChange: "transform",
+    transform: "translateZ(0)",
+    zIndex: 0,
+  },
+
+  glassCard: {
+    width: "75%",
+    maxWidth: "1400px",
+    minWidth: "600px",
+    marginTop: "120px",
+    marginBottom: "100px",
+    padding: "56px",
+    borderRadius: "32px",
+    background:
+      "linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.4) 100%)",
+    backdropFilter: "blur(16px)",
+    WebkitBackdropFilter: "blur(16px)",
+    transform: "translateZ(0)",
+    border: "1px solid rgba(255, 255, 255, 0.5)",
+    boxShadow: `
+      0 30px 60px rgba(15, 23, 42, 0.08),
+      0 4px 12px rgba(15, 23, 42, 0.03),
+      inset 0 1px 1px rgba(255, 255, 255, 0.9),
+      inset 0 -1px 1px rgba(255, 255, 255, 0.3)
+    `,
+    zIndex: 10,
+    boxSizing: "border-box",
+  },
+
+  loadingOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    background: "rgba(255,255,255,0.6)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    fontSize: "22px",
+    fontWeight: "600",
+    zIndex: 1000,
+    color: "#0f172a",
+  },
+
+  modalCard: {
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%,-50%)",
+    width: "400px",
+    padding: "40px",
+    borderRadius: "24px",
+    background: "#ffffff",
+    border: "1px solid rgba(226, 232, 240, 0.8)",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.08)",
+    textAlign: "center",
+    zIndex: 1000,
+    color: "#0f172a",
+  },
+};
