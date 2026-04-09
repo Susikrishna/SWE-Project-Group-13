@@ -16,7 +16,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Mount the authorization engine
 app.use("/auth", authRoutes);
 
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "auth-engine" }));
@@ -26,7 +25,7 @@ const PORT = process.env.PORT || 4000;
 async function startServer() {
   try {
     await connectDB();
-    app.listen(PORT, () => console.log(`🚀 [auth-engine] Running on port ${PORT}`));
+    app.listen(PORT, () => console.log(` [auth-engine] Running on port ${PORT}`));
   } catch (err) {
     console.error("Failed to connect DB:", err);
     process.exit(1);

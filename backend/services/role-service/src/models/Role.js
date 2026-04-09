@@ -2,7 +2,6 @@ const mongoose = require("mongoose");
 
 const roleSchema = new mongoose.Schema(
     {
-        // Custom string ID matching your DB design (e.g., 'role_support')
         _id: {
             type: String,
             required: true,

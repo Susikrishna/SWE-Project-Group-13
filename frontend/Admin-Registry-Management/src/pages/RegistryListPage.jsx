@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { styles } from "../styles/registryTheme";
-import { fetchMicroservices, fetchMicrofrontends, searchMicroservices, searchMicrofrontends } from "../services/registryApi";
-import RegistryCard from "../components/RegistryCard";
-import EditRegistryModal from "../components/EditRegistryModal";
-
-const MAX_SEARCH_RESULTS = 10;
-const DEFAULT_DISPLAY_COUNT = 10;
+import MfeTable from "../components/MfeTable";
+import ApiTable from "../components/ApiTable";
 
 const RegistryListPage = () => {
   const [displayedItems, setDisplayedItems] = useState([]);
@@ -85,57 +81,14 @@ const RegistryListPage = () => {
     <div style={styles.page}>
       <div style={styles.wave}></div>
       <div style={styles.wave2}></div>
-
       <div style={styles.glassCard}>
         <h1 style={styles.heading}>Registered Components</h1>
         <p style={styles.subHeading}>View all active APIs and MFEs in the ecosystem.</p>
-
-        {/* Search Bar */}
-        <div style={{ position: "relative", marginBottom: "32px" }}>
-          <div style={styles.searchWrapper}>
-            <svg
-              style={styles.searchIcon}
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              id="registry-search-bar"
-              type="text"
-              placeholder="Search by name, route, method, permission..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={styles.searchInput}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                style={styles.searchClear}
-                aria-label="Clear search"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-          {isSearching && !loading && (
-            <p style={styles.resultCount}>
-              Showing top {displayedItems.length} matching results from server
-            </p>
-          )}
-          {!isSearching && !loading && (
-            <p style={styles.resultCount}>
-              Showing default {displayedItems.length} components — use search to find specific items
-            </p>
-          )}
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <MfeTable />
+        </div>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <ApiTable />
         </div>
 
         {/* Content */}
