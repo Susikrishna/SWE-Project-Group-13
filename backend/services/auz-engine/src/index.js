@@ -9,14 +9,14 @@ require("./models/mfeRegistry.model");
 require("./models/Role");
 
 const authRoutes = require("./routes/authRoutes");
-
+const logRoutes = require("./routes/LogRoutes/LogRoutes")
 const app = express();
 
 app.use(express.json());
 app.use(cors());
 
 app.use("/auth", authRoutes);
-
+app.use("/log",logRoutes);
 app.get("/health", (_req, res) => res.json({ status: "ok", service: "auth-engine" }));
 
 const PORT = process.env.PORT || 4000;

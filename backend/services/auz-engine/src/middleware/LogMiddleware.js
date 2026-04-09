@@ -7,7 +7,7 @@ const logger = (action) => async (req, res, next) => {
     res.json = async (body) => {
         try {
             let decision;
-
+            
             if (action === "authorize") {
                 decision = "BULK";
             } else if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -15,11 +15,11 @@ const logger = (action) => async (req, res, next) => {
             } else {
                 decision = "DENY";
             }
-            
+            console.log(req.accessProfile)
             await Log.create({
                 timestamp: new Date(),
-                userId: req.user?.userId ?? "NA",
-                roleId: req.user?.role?._id ?? null,
+                userId: req.accessProfile?.userId ?? "NA",
+                roleId: req.accessProfile?.roleIds[0] ?? null,
                 action,
                 permission: req.body?.permissionKey ?? null,
                 decision,

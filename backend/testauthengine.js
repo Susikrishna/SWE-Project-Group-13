@@ -7,11 +7,11 @@ const BASE_URL = "http://localhost:3000";
 
 function generateToken() {
     console.log("\nGenerating JWT token...");
-
+    
     const output = execSync(
         `node services/auz-engine/src/utils/generateDummyToken.js ${ROLE_ID}`
     ).toString();
-
+    
     const tokenLine = output.split("\n").find(line => line.startsWith("Bearer"));
     const token = tokenLine.split(" ")[1];
     
