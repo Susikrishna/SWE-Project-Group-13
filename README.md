@@ -1,69 +1,212 @@
-# Project Overview & Architecture setup
+# SWE Group 13 — RBAC Microfrontend Platform
 
-This project implements a Role-Based Access Control (RBAC) system with a **microfrontend (MFE)** architecture and independent **backend microservices** for Role creation and Registry Management.
-
----
-
-## Architecture: Hybrid Environment Approach
-
-To support both seamless local development and decoupled microservices, this monorepo utilizes a **Hybrid `.env` Architecture**:
-
-1. **Root `.env` (Global):** Contains strictly shared infrastructure variables like database URLs and global secret keys.
-2. **Service `.env` (Local):** Located inside each specific microservice or microfrontend folder. Contains service-specific properties (e.g., specific `PORT`s for backends, or `VITE_` API URLs for frontends).
-
-> **Important:** When starting a backend server, Node will automatically cascade the root `.env` first, and then apply the local `.env` variables securely.
+A **Role-Based Access Control (RBAC)** system built with a **microfrontend (MFE)** architecture and independent **backend microservices**. Admins can manage roles and a service registry through separate, independently deployable apps.
 
 ---
 
-## Setup Instructions
+## Architecture Overview
 
-### 1. Global Setup
-At the root of the project `SWE-Project-Group-13`, duplicate the `.env.example` file and rename it to `.env`. Ensure your global secrets are set:
-```env
-MONGO_DB_URI=your_mongodb_uri_here
-JWT_SECRET=your_jwt_secret_here
+```
+Project/
+├── backend/
+│   └── services/
+│       ├── auz-engine/          # Auth & JWT issuing (port 3000)
+│       ├── registry-service/    # API & MFE registry (port 5001)
+│       ├── role-service/        # Role CRUD (port 3002)
+│       └── user-service/        # User management (port 3003)
+└── frontend/
+    ├── Admin-Registry-Management/   # Vite + React MFE (port 5002)
+    └── Admin-Role-Creation/         # Vite + React MFE (port 5173)
 ```
 
-### 2. Authorization Engine (Backend)
-**Location:** `/backend/services/auz-engine`
-1. Install dependencies: `npm install`
-2. Create/Verify its local `.env`:
-   ```env
-   PORT=3000
-   ```
-3. Run: `npm run dev`
+Each backend service runs independently with its own Express server, MongoDB connection, and `.env` file. The two Vite frontends communicate with the backends via environment-configured URLs.
 
-### 3. Registry Management (Backend & Frontend)
-**Backend Location:** `/backend/services/registry-service`
-1. Install dependencies: `npm install`
-2. Create/Verify its local `.env`:
-   ```env
-   PORT=3001
-   ```
-3. Run: `npm run dev`
+---
 
-**Frontend Location:** `/frontend/Admin-Registry-Management`
-1. Install dependencies: `npm install`
-2. Create/Verify its local `.env`:
-   ```env
-   VITE_REGISTRY_URL=http://localhost:3001
-   ```
-3. Run: `npm run dev`
+## Port Reference
 
-### 4. Role Creation (Backend & Frontend)
-**Backend Location:** `/backend/services/role-service`
-1. Install dependencies: `npm install`
-2. Create/Verify its local `.env`:
-   ```env
-   PORT=3002
-   ```
-3. Run: `npm run dev`
+| Service | Type | Default Port |
+|---|---|---|
+| `auz-engine` | Backend | `3000` |
+| `registry-service` | Backend | `5001` |
+| `role-service` | Backend | `3002` |
+| `user-service` | Backend | `3003` |
+| `Admin-Registry-Management` | Frontend (Vite) | `5002` |
+| `Admin-Role-Creation` | Frontend (Vite) | `5173` |
 
-**Frontend Location:** `/frontend/Admin-Role-Creation`
-1. Install dependencies: `npm install`
-2. Create/Verify its local `.env`:
-   ```env
-   VITE_SERVER_URL=http://localhost:3002
-   VITE_REGISTRY_URL=http://localhost:3001
-   ```
-3. Run: `npm run dev`
+---
+
+## Environment Variables
+
+Each service has its own `.env` file. **Never commit `.env` files** — they are git-ignored at the root. Use the `.env.example` in each directory as the template.
+
+### Where the `.env` files live
+
+```
+backend/services/auz-engine/.env          ← copy from .env.example
+backend/services/registry-service/.env   ← copy from .env.example
+backend/services/role-service/.env       ← copy from .env.example
+backend/services/user-service/.env       ← copy from .env.example
+frontend/Admin-Registry-Management/.env  ← copy from .env.example
+frontend/Admin-Role-Creation/.env        ← copy from .env.example
+```
+
+### Variable reference
+
+| Variable | Used in | Description |
+|---|---|---|
+| `PORT` | All backends | Port the service listens on |
+| `MONGO_DB_URI` | `auz-engine`, `registry-service`, `role-service`, `user-service` | MongoDB Atlas connection string |
+| `JWT_SECRET` | `auz-engine`, `registry-service` | Secret for signing/verifying JWTs — **must match across both** |
+| `VITE_SERVER_URL` | Both frontends | URL of the backend service the frontend posts to |
+| `VITE_REGISTRY_URL` | Both frontends | URL of the registry service |
+
+> ⚠️ `JWT_SECRET` must be identical in `auz-engine` and `registry-service`. If they differ, token verification will fail.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js ≥ 18
+- A MongoDB Atlas cluster (or local MongoDB instance)
+
+---
+
+### 1. Clone & set up environment files
+
+```bash
+git clone <repo-url>
+cd SWE-Project-Group-13
+```
+
+For each service, copy the example file and fill in your values:
+
+```bash
+# Backend services
+cp backend/services/auz-engine/.env.example       backend/services/auz-engine/.env
+cp backend/services/registry-service/.env.example backend/services/registry-service/.env
+cp backend/services/role-service/.env.example     backend/services/role-service/.env
+cp backend/services/user-service/.env.example     backend/services/user-service/.env
+
+# Frontends
+cp frontend/Admin-Registry-Management/.env.example frontend/Admin-Registry-Management/.env
+cp frontend/Admin-Role-Creation/.env.example       frontend/Admin-Role-Creation/.env
+```
+
+---
+
+### 2. Auth Engine (`auz-engine`)
+
+```bash
+cd backend/services/auz-engine
+npm install
+npm run dev
+```
+
+`.env` variables needed:
+
+```env
+PORT=3000
+MONGO_DB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>
+JWT_SECRET=your_shared_secret
+```
+
+---
+
+### 3. Registry Service
+
+```bash
+cd backend/services/registry-service
+npm install
+npm run dev
+```
+
+`.env` variables needed:
+
+```env
+PORT=5001
+MONGO_DB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>
+JWT_SECRET=your_shared_secret   # must match auz-engine
+```
+
+---
+
+### 4. Role Service
+
+```bash
+cd backend/services/role-service
+npm install
+npm run dev
+```
+
+`.env` variables needed:
+
+```env
+PORT=3002
+MONGO_DB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>
+```
+
+---
+
+### 5. User Service
+
+```bash
+cd backend/services/user-service
+npm install
+npm run dev
+```
+
+`.env` variables needed:
+
+```env
+PORT=3003
+MONGO_DB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/<db>
+```
+
+---
+
+### 6. Admin Registry Management (Frontend)
+
+```bash
+cd frontend/Admin-Registry-Management
+npm install
+npm run dev
+```
+
+`.env` variables needed:
+
+```env
+VITE_SERVER_URL=http://localhost:5002
+VITE_REGISTRY_URL=http://localhost:5001
+```
+
+---
+
+### 7. Admin Role Creation (Frontend)
+
+```bash
+cd frontend/Admin-Role-Creation
+npm install
+npm run dev
+```
+
+`.env` variables needed:
+
+```env
+VITE_SERVER_URL=http://localhost:3002
+VITE_REGISTRY_URL=http://localhost:5001
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite, Module Federation |
+| Backend | Node.js, Express |
+| Database | MongoDB (Mongoose) |
+| Auth | JWT (`jsonwebtoken`) |
+| Dev tooling | Nodemon, ESLint |

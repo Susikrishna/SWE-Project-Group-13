@@ -1,4 +1,3 @@
-require('dotenv').config({ path: '../../../.env' });
 require('dotenv').config();
 const express = require("express");
 const cors = require("cors"); // REQUIRED for React frontend to talk to this API
