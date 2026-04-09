@@ -125,4 +125,55 @@ const getApis = async (req, res) => {
   }
 };
 
-module.exports = { createApi, createBulkApis, getApis };
+/**
+ * Updates an existing API registry entry by ID.
+ * Restricted to safe fields to prevent breaking the gateway or RBAC.
+ */
+const updateApi = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { description, isPublic, isActive } = req.body;
+
+    const updateData = {};
+    if (description !== undefined) updateData.description = description?.trim();
+    if (isPublic !== undefined) updateData.isPublic = isPublic;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const api = await ApiRegistry.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!api) {
+      return res.status(404).json({ error: "API not found" });
+    }
+
+    res.json(api);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Searches APIs by a query string, returning top 10 matches.
+ */
+const searchApis = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const regex = new RegExp(q, 'i');
+    const apis = await ApiRegistry.find({
+      $or: [
+        { service: regex },
+        { basePath: regex },
+        { route: regex },
+        { method: regex },
+        { permissionKey: regex },
+        { description: regex },
+        { resource: regex }
+      ]
+    }).limit(10).sort({ createdAt: -1 });
+    res.json(apis);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { createApi, createBulkApis, getApis, updateApi, searchApis };

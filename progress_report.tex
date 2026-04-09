@@ -1,0 +1,559 @@
+\documentclass[aspectratio=169]{beamer}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Packages
+% ─────────────────────────────────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{colorlinks=false}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Color Palette
+% ─────────────────────────────────────────────────────────────────────────────
+\definecolor{PrimaryDark}{HTML}{1A1A2E}
+\definecolor{PrimaryBlue}{HTML}{0F3460}
+\definecolor{AccentTeal}{HTML}{16213E}
+\definecolor{HighlightCyan}{HTML}{0EA5E9}
+\definecolor{HighlightGreen}{HTML}{10B981}
+\definecolor{HighlightAmber}{HTML}{F59E0B}
+\definecolor{HighlightRed}{HTML}{EF4444}
+\definecolor{LightGray}{HTML}{F1F5F9}
+\definecolor{MidGray}{HTML}{64748B}
+\definecolor{CodeBg}{HTML}{1E293B}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Beamer Theme
+% ─────────────────────────────────────────────────────────────────────────────
+\usetheme{default}
+\usecolortheme[named=PrimaryBlue]{structure}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize item}{\color{HighlightCyan}\textbullet}
+\setbeamertemplate{itemize subitem}{\color{HighlightGreen}$\triangleright$}
+\setbeamertemplate{enumerate item}{\color{HighlightCyan}\insertenumlabel.}
+
+% Frametitle styling
+\setbeamercolor{frametitle}{bg=PrimaryBlue, fg=white}
+\setbeamercolor{framesubtitle}{fg=HighlightCyan}
+\setbeamerfont{frametitle}{series=\bfseries, size=\large}
+\setbeamercolor{block title}{bg=HighlightCyan!20, fg=PrimaryBlue}
+\setbeamercolor{block body}{bg=HighlightCyan!5, fg=black}
+\setbeamercolor{block title alerted}{bg=HighlightAmber!25, fg=PrimaryBlue}
+\setbeamercolor{block body alerted}{bg=HighlightAmber!8, fg=black}
+\setbeamercolor{block title example}{bg=HighlightGreen!20, fg=PrimaryBlue}
+\setbeamercolor{block body example}{bg=HighlightGreen!6, fg=black}
+
+% Footer
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=.33\paperwidth,ht=2.5ex,dp=1ex,left,leftskip=1em]{author in head/foot}%
+      \usebeamerfont{author in head/foot}\insertshortauthor
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.34\paperwidth,ht=2.5ex,dp=1ex,center]{title in head/foot}%
+      \usebeamerfont{title in head/foot}\insertshorttitle
+    \end{beamercolorbox}%
+    \begin{beamercolorbox}[wd=.33\paperwidth,ht=2.5ex,dp=1ex,right,rightskip=1em]{date in head/foot}%
+      \usebeamerfont{date in head/foot}\insertframenumber{} / \inserttotalframenumber
+    \end{beamercolorbox}%
+  }%
+  \vskip0pt%
+}
+
+% Code listing style
+\lstdefinestyle{jsStyle}{
+  backgroundcolor=\color{CodeBg},
+  basicstyle=\ttfamily\tiny\color{white},
+  keywordstyle=\color{HighlightCyan}\bfseries,
+  stringstyle=\color{HighlightGreen},
+  commentstyle=\color{MidGray}\itshape,
+  breaklines=true,
+  frame=none,
+  xleftmargin=1em,
+  xrightmargin=1em,
+}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Title information
+% ─────────────────────────────────────────────────────────────────────────────
+\title[RBAC Progress Report]{14.\ Role and Permission Management}
+\subtitle{Progress Report --- SWE Project Group 13}
+\author[Group 13]{SWE-Project-Group-13}
+\date{\today}
+
+% ─────────────────────────────────────────────────────────────────────────────
+% Helper command: coloured badge
+% ─────────────────────────────────────────────────────────────────────────────
+\newcommand{\badge}[2]{%
+  \fcolorbox{#1!60}{#1!15}{\footnotesize\color{#1!80!black}\textbf{#2}}%
+}
+
+% =============================================================================
+\begin{document}
+% =============================================================================
+
+% ─── Title Frame ─────────────────────────────────────────────────────────────
+{
+\setbeamertemplate{footline}{}
+\begin{frame}
+  \begin{tikzpicture}[remember picture, overlay]
+    \fill[PrimaryBlue] (current page.north west) rectangle
+                        ([yshift=-0.38\paperheight]current page.north east);
+    \fill[HighlightCyan!80!white, opacity=0.15]
+      ([xshift=-1cm,yshift=-0.5cm]current page.north east)
+      circle (3.5cm);
+  \end{tikzpicture}
+  \vspace{0.8cm}
+  \begin{center}
+    {\color{white}\Large\bfseries 14.\ Role and Permission Management}\\[0.3cm]
+    {\color{HighlightCyan}\normalsize Progress Report}\\[0.2cm]
+    {\color{white!80}\small SWE-Project-Group-13 \quad $\bullet$ \quad \today}
+  \end{center}
+  \vspace{0.4cm}
+\end{frame}
+}
+
+% ─── Table of Contents ───────────────────────────────────────────────────────
+\begin{frame}{Agenda}
+  \tableofcontents
+\end{frame}
+
+% =============================================================================
+\section{Summary}
+% =============================================================================
+\begin{frame}{Summary}
+  \begin{block}{What we are building}
+    A \textbf{centralized RBAC (Role-Based Access Control)} system to define roles,
+    permissions, resource scoping, and dynamic policy evaluation.
+  \end{block}
+  \vspace{0.4cm}
+  \begin{itemize}
+    \item Flat, high-performance permission storage (no recursive role traversal)
+    \item Support for \textbf{temporary roles} with expiry dates (delegation mechanism)
+    \item \textbf{Microfrontend-aware} authorization --- the engine controls \emph{which UI modules}
+          a user sees, not just which APIs they may call
+    \item Centralized \textbf{Audit \& Registry} views for administrators
+  \end{itemize}
+\end{frame}
+
+% =============================================================================
+\section{Objectives \& Scope}
+% =============================================================================
+\begin{frame}{Objectives \& Scope}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    \begin{block}{Objective}
+      Provide \textbf{secure, flexible permissioning} across all applications with
+      centralized administration and audit capabilities.
+    \end{block}
+    \vspace{0.2cm}
+    \begin{alertblock}{Key Design Goal}
+      One authorization engine serves \emph{both} backend microservices and
+      React microfrontend shells --- no duplicated permission logic.
+    \end{alertblock}
+
+    \column{0.48\textwidth}
+    \begin{exampleblock}{Scope}
+      \begin{itemize}
+        \item Role definition \& storage
+        \item Permission assignment per resource
+        \item MFE access gating
+        \item Role hierarchy (temporary roles)
+        \item API Registry \& MFE Registry
+        \item Admin consoles (Role Creator, Registry Manager)
+      \end{itemize}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% =============================================================================
+\section{Key Points}
+% =============================================================================
+\begin{frame}{Key Feature Areas}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    \begin{center}
+      \badge{HighlightCyan}{Role Templates}
+    \end{center}
+    \smallskip
+    10 seeded roles --- \texttt{super-admin}, \texttt{user}, \texttt{support-agent},
+    \texttt{finance-manager}, \texttt{platform-admin}, \texttt{analyst},
+    \texttt{notification-manager}, \texttt{guest}, \texttt{contractor-dev},
+    \texttt{external-auditor}.
+
+    \vspace{0.5cm}
+    \begin{center}
+      \badge{HighlightGreen}{Temporary Role Delegation}
+    \end{center}
+    \smallskip
+    Roles carry an \texttt{isTemp} flag and \texttt{expiresAt} field.
+    The engine rejects expired tokens at runtime without DB writes.
+
+    \column{0.48\textwidth}
+    \begin{center}
+      \badge{HighlightAmber}{MFE Scoping}
+    \end{center}
+    \smallskip
+    Each role lists allowed \texttt{mfeAccess} slugs.  The authorization
+    API returns full remote-URL objects so the React shell knows which
+    micro\-frontend bundles to load dynamically.
+
+    \vspace{0.5cm}
+    \begin{center}
+      \badge{HighlightRed}{Audit \& Registry}
+    \end{center}
+    \smallskip
+    All API endpoints and MFE modules are stored in dedicated registry
+    collections visible through the Admin Registry Portal.
+  \end{columns}
+\end{frame}
+
+% =============================================================================
+\section{System Architecture}
+% =============================================================================
+\begin{frame}{System Architecture Overview}
+  \begin{center}
+  \begin{tikzpicture}[
+      node distance=0.9cm and 1.5cm,
+      box/.style args={#1}{
+  draw, rounded corners=4pt,
+  fill=#1!12,
+  draw=#1!60,
+  minimum width=2.3cm,
+  minimum height=0.7cm,
+  font=\small\bfseries,
+  align=center
+},
+arr/.style args={#1}{
+  ->, >=stealth, thick, draw=#1!70
+}
+    ]
+    % Frontend layer
+    \node[box=HighlightCyan] (rc) {Admin Role\\Creator};
+    \node[box=HighlightCyan, right=1.2cm of rc] (rm) {Admin Registry\\Manager};
+
+    % Auth engine
+    \node[box=PrimaryBlue, below=1.0cm of rc, xshift=1.55cm, minimum width=5.2cm] (ae)
+      {\color{white}Authorization Engine (auz-engine)};
+
+    % DB
+    \node[box=HighlightGreen, below=0.9cm of ae, xshift=-1.55cm] (roles) {Roles\\Collection};
+    \node[box=HighlightGreen, below=0.9cm of ae, xshift=1.55cm] (reg)   {Registry\\Collections};
+
+    % Microservices
+    \node[box=HighlightAmber, right=1.3cm of ae] (ms) {Other\\Microservices};
+
+    % Arrows
+    \draw[arr=HighlightCyan] (rc) -- (ae);
+    \draw[arr=HighlightCyan] (rm) -- (ae);
+    \draw[arr=PrimaryBlue]   (ae) -- (roles);
+    \draw[arr=PrimaryBlue]   (ae) -- (reg);
+    \draw[arr=HighlightAmber,dashed] (ae) -- node[above,font=\tiny]{JWT check} (ms);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.1cm}
+  \footnotesize
+  \textbf{3 backend services}:
+  \texttt{auz-engine} (authorization), \texttt{registry-service} (API/MFE catalogue),
+  \texttt{role-service} (CRUD on roles). \quad
+  \textbf{2 frontend portals}:
+  \texttt{Admin-Role-Creation}, \texttt{Admin-Registry-Management}.
+\end{frame}
+
+% =============================================================================
+\section{Functionalities Implemented}
+% =============================================================================
+
+% ── 4a: Authorization Engine ────────────────────────────────────────────────
+\begin{frame}{Authorization Engine --- \texttt{auz-engine}}
+  \begin{columns}[t]
+    \column{0.55\textwidth}
+    \textbf{Middleware pipeline} (every protected request):
+    \begin{enumerate}
+      \item \texttt{verifyToken} --- validates Bearer JWT, extracts \texttt{roleIds}
+      \item \texttt{loadAccessProfile} --- fetches roles from DB, merges permissions
+            \& MFE slugs into a flat set
+      \item \texttt{requirePermission(key)} --- O(1) lookup, returns \texttt{403}
+            if the key is absent
+    \end{enumerate}
+    \vspace{0.4cm}
+    \textbf{REST endpoints}:
+    \begin{itemize}
+      \item \texttt{GET /auth/authorize} --- returns the user's full permission
+            array \emph{and} the hydrated MFE objects (with \texttt{remoteUrl}/\texttt{module})
+      \item \texttt{POST /auth/check-access} --- internal microservice call to
+            verify a single \texttt{permissionKey}
+    \end{itemize}
+
+    \column{0.42\textwidth}
+    \lstset{style=jsStyle, language=JavaScript}
+    \begin{lstlisting}
+// accessProfile.js (core logic)
+function hasPermission(profile, key) {
+  const k = key.trim().toLowerCase();
+  return profile
+    .mergedPermissions
+    .includes(k); // O(1)
+}
+
+function isTempRoleCurrentlyValid(role) {
+  if (!role.isTemp) return true;
+  return new Date() <= new Date(role.expiresAt);
+}
+    \end{lstlisting}
+  \end{columns}
+\end{frame}
+
+% ── 4b: Role Schema & Seed ──────────────────────────────────────────────────
+\begin{frame}{Role Designer --- Schema \& Seeded Data}
+  \begin{columns}[t]
+    \column{0.50\textwidth}
+    \textbf{Mongoose \texttt{Role} schema} (flattened, no joins):
+    \begin{itemize}
+      \item \texttt{\_id} --- custom string, e.g.\ \texttt{"role\_admin"}
+      \item \texttt{permissions[]} --- e.g.\ \texttt{"user-service:user:read"}
+      \item \texttt{mfeAccess[]} --- MFE feature slugs
+      \item \texttt{isTemp} + \texttt{expiresAt} --- temporary delegation
+    \end{itemize}
+    \vspace{0.3cm}
+    Permission string format:\\
+    \texttt{\{service\}:\{resource\}:\{action\}}\\[4pt]
+    e.g.\ \texttt{billing-service:invoice:create}
+
+    \column{0.47\textwidth}
+    \textbf{10 seeded roles}:
+    \medskip
+
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      \small\textbf{Role} & \small\textbf{Type} \\
+      \midrule
+      \small super-admin         & Permanent \\
+      \small user                & Permanent \\
+      \small support-agent       & Permanent \\
+      \small finance-manager     & Permanent \\
+      \small platform-admin      & Permanent \\
+      \small analyst             & Permanent \\
+      \small notification-manager & Permanent \\
+      \small guest               & Permanent \\
+      \small contractor-dev      & \textcolor{HighlightAmber}{Temporary} \\
+      \small external-auditor    & \textcolor{HighlightAmber}{Temporary} \\
+      \bottomrule
+    \end{tabular}
+  \end{columns}
+\end{frame}
+
+% ── 4c: Registry Service ────────────────────────────────────────────────────
+\begin{frame}{API \& MFE Registry Service}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    \begin{block}{API Registry}
+      Stores every microservice endpoint with:
+      \begin{itemize}
+        \item \texttt{service}, \texttt{basePath}, \texttt{route}, \texttt{method}
+        \item \texttt{resource}, \texttt{action}
+        \item \texttt{permissionKey} (the canonical string used in roles)
+        \item \texttt{isActive} toggle (soft decommission)
+      \end{itemize}
+      \medskip
+      Seeded with \textbf{23 endpoints} across 5 services:
+      auth, user, billing, notification, report.
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{MFE Registry}
+      Stores every frontend module with:
+      \begin{itemize}
+        \item \texttt{feature} slug (linked to role \texttt{mfeAccess})
+        \item \texttt{remoteUrl} --- Module Federation CDN/dev URL
+        \item \texttt{module} --- Webpack exposed module name
+        \item \texttt{route} --- shell router mount path
+        \item \texttt{isActive} --- dark launch toggle
+      \end{itemize}
+      \medskip
+      3 MFEs registered: \texttt{dashboard-mfe}, \texttt{admin-mfe}, \texttt{analytics-mfe}.
+    \end{block}
+  \end{columns}
+\end{frame}
+
+% ── 4d: Admin Registry Manager ─────────────────────────────────────────────
+\begin{frame}{Admin Console --- Registry Management Portal}
+  \begin{columns}[t]
+    \column{0.55\textwidth}
+    \textbf{Admin-Registry-Management} (Vite + React):
+    \begin{itemize}
+      \item Lists all registered \textbf{APIs and MFEs} in one unified view
+      \item \textbf{Method badges} (GET/POST/PUT/DELETE) with colour coding
+      \item \textbf{Live search} across service name, route, method, permission key,
+            description --- results capped at 10, updated on every keystroke
+      \item \textbf{Form pages} to register new microservices or microfrontends
+      \item Loading / error / empty states handled gracefully
+    \end{itemize}
+    \vspace{0.3cm}
+    \textbf{Admin-Role-Creation} (Vite + React):
+    \begin{itemize}
+      \item \textbf{Role Designer} form --- create roles, assign permission strings
+            and MFE slugs, set temporary expiry
+      \item \textbf{Roles list} page --- view all stored roles
+      \item Dashboard home with navigation
+    \end{itemize}
+
+    \column{0.42\textwidth}
+    \begin{exampleblock}{Live Search Implementation}
+      \lstset{style=jsStyle, language=JavaScript}
+      \begin{lstlisting}
+const filtered = useMemo(() => {
+  if (!search.trim()) return allItems;
+  const q = search.toLowerCase();
+  return allItems
+    .filter(item =>
+      item._type === "API"
+        ? [item.service, item.route,
+           item.method,
+           item.permissionKey]
+            .some(v =>
+              (v||"").toLowerCase()
+              .includes(q))
+        : [item.name, item.feature,
+           item.route]
+            .some(v =>
+              (v||"").toLowerCase()
+              .includes(q))
+    )
+    .slice(0, 10); // cap at 10
+}, [search, allItems]);
+      \end{lstlisting}
+    \end{exampleblock}
+  \end{columns}
+\end{frame}
+
+% ── 4e: JWT Auth Flow ───────────────────────────────────────────────────────
+\begin{frame}{Authentication \& Authorization Flow}
+  \begin{center}
+  \begin{tikzpicture}[
+      every node/.style={font=\small},
+      step/.style={draw, rounded corners=3pt, fill=#1!10, draw=#1!50,
+                   minimum width=2.6cm, minimum height=0.65cm, align=center},
+      arr/.style={->, >=stealth, thick}
+    ]
+    \node[step=HighlightCyan]  (client)  {Client\\(React Shell)};
+    \node[step=PrimaryBlue,    right=1cm of client]  (vt)  {\texttt{verifyToken}\\middleware};
+    \node[step=PrimaryBlue,    right=1cm of vt]      (lap) {\texttt{loadAccess\\Profile}};
+    \node[step=HighlightGreen, right=1cm of lap]     (rp)  {\texttt{require\\Permission}};
+    \node[step=HighlightAmber, right=1cm of rp]      (ctrl){Controller\\/ Service};
+
+    \node[step=HighlightRed,   below=0.9cm of vt]    (r401){\texttt{401}\\Invalid JWT};
+    \node[step=HighlightRed,   below=0.9cm of rp]    (r403){\texttt{403}\\Forbidden};
+
+    \draw[arr] (client) -- node[above,font=\tiny]{Bearer JWT} (vt);
+    \draw[arr] (vt)     -- (lap);
+    \draw[arr] (lap)    -- (rp);
+    \draw[arr] (rp)     -- (ctrl);
+    \draw[arr,dashed,draw=HighlightRed] (vt)  -- (r401);
+    \draw[arr,dashed,draw=HighlightRed] (rp)  -- (r403);
+  \end{tikzpicture}
+  \end{center}
+  \vspace{0.2cm}
+  \begin{itemize}
+    \item Token payload carries \texttt{userId} and one or more \texttt{roleIds}
+    \item Roles are fetched from MongoDB and \emph{merged} into a single permission set
+    \item Temporary roles are validated against \texttt{expiresAt} \emph{before} merging
+    \item A single \texttt{permissionKey} string (e.g.\ \texttt{user-service:user:delete})
+          gates every endpoint
+  \end{itemize}
+\end{frame}
+
+% =============================================================================
+\section{Progress Summary}
+% =============================================================================
+\begin{frame}{Progress Summary}
+  \begin{center}
+  \renewcommand{\arraystretch}{1.35}
+  \begin{tabular}{@{} p{4.8cm} c c @{}}
+    \toprule
+    \textbf{Feature / Component} & \textbf{Status} & \textbf{Component} \\
+    \midrule
+    JWT middleware (\texttt{verifyToken})       & \badge{HighlightGreen}{Done}     & auz-engine \\
+    Access profile loader                       & \badge{HighlightGreen}{Done}     & auz-engine \\
+    Permission guard (\texttt{requirePermission}) & \badge{HighlightGreen}{Done}   & auz-engine \\
+    \texttt{GET /auth/authorize} endpoint       & \badge{HighlightGreen}{Done}     & auz-engine \\
+    \texttt{POST /auth/check-access} endpoint   & \badge{HighlightGreen}{Done}     & auz-engine \\
+    Role schema (flat, temp-role support)       & \badge{HighlightGreen}{Done}     & DB / role-service \\
+    10 seeded roles                             & \badge{HighlightGreen}{Done}     & demo-database \\
+    API Registry (23 endpoints seeded)         & \badge{HighlightGreen}{Done}     & registry-service \\
+    MFE Registry (3 modules seeded)             & \badge{HighlightGreen}{Done}     & registry-service \\
+    Admin Registry Management Portal           & \badge{HighlightGreen}{Done}     & Frontend \\
+    Admin Role Creation Portal                 & \badge{HighlightGreen}{Done}     & Frontend \\
+    Access Simulator (test effective perms)     & \badge{HighlightAmber}{Planned}  & auz-engine \\
+    Audit Logs (permission change \& access)    & \badge{HighlightAmber}{Planned}  & All services \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{frame}
+
+% =============================================================================
+\section{What's Next}
+% =============================================================================
+\begin{frame}{Next Steps}
+  \begin{columns}[t]
+    \column{0.48\textwidth}
+    \begin{block}{Access Simulator}
+      A UI panel (in the Admin Console) that lets an administrator input a
+      \texttt{userId} and a \texttt{permissionKey} and instantly see whether
+      the user would be granted access --- without modifying any data.
+    \end{block}
+    \vspace{0.3cm}
+    \begin{block}{Audit Logs}
+      Append-only log collection capturing:
+      \begin{itemize}
+        \item Who modified which role and when
+        \item Every \texttt{403} access denial (userId, resource, timestamp)
+      \end{itemize}
+    \end{block}
+
+    \column{0.48\textwidth}
+    \begin{block}{Attribute-Based (ABAC) Conditions}
+      Extend the policy engine to support conditions such as:
+      \begin{itemize}
+        \item Time-of-day windows (``edit only during business hours'')
+        \item IP / location constraints
+        \item Resource-owner checks (\texttt{userId === resource.ownerId})
+      \end{itemize}
+    \end{block}
+    \vspace{0.3cm}
+    \begin{block}{Integration Testing}
+      End-to-end tests covering the full JWT $\to$ permission gate flow using
+      the demo-database seed data.
+    \end{block}
+  \end{columns}
+\end{frame}
+
+% ─── Closing Frame ───────────────────────────────────────────────────────────
+{
+\setbeamertemplate{footline}{}
+\begin{frame}
+  \begin{tikzpicture}[remember picture, overlay]
+    \fill[PrimaryBlue] (current page.south west) rectangle
+                        ([yshift=0.35\paperheight]current page.south east);
+  \end{tikzpicture}
+  \vfill
+  \begin{center}
+    {\LARGE\bfseries Thank You}\\[0.4cm]
+    {\large\color{MidGray} Questions?}\\[0.6cm]
+    \rule{0.4\textwidth}{0.4pt}\\[0.3cm]
+    \color{white}
+    {\small SWE-Project-Group-13 \quad $\bullet$ \quad \today}
+  \end{center}
+  \vfill
+\end{frame}
+}
+
+\end{document}

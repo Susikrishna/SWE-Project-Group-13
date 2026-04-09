@@ -7,9 +7,10 @@ export const styles = {
     width: "100%",
     height: "100vh",
     background:
-      "radial-gradient(circle at center, rgba(255,255,255,0.8), transparent 60%)",
-    filter: "blur(80px)",
+      "radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%)",
     animation: "waveMove 15s ease-in-out infinite",
+    willChange: "transform",
+    transform: "translateZ(0)",
     zIndex: 0,
   },
   wave2: {
@@ -19,9 +20,10 @@ export const styles = {
     width: "100%",
     height: "100vh",
     background:
-      "radial-gradient(circle at center, rgba(226, 232, 240, 0.6), transparent 60%)",
-    filter: "blur(80px)",
+      "radial-gradient(circle at center, rgba(226, 232, 240, 0.6) 0%, rgba(226, 232, 240, 0) 60%)",
     animation: "waveMove2 20s ease-in-out infinite",
+    willChange: "transform",
+    transform: "translateZ(0)",
     zIndex: 0,
   },
 
@@ -55,8 +57,9 @@ export const styles = {
     background: "linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.4) 100%)", 
     
     // 🌟 2. Heavier Frosting
-    backdropFilter: "blur(40px)",
-    WebkitBackdropFilter: "blur(40px)",
+    backdropFilter: "blur(16px)", // Reduced from 40px to improve framerate
+    WebkitBackdropFilter: "blur(16px)",
+    transform: "translateZ(0)", // Force hardware acceleration
     
     // Delicate physical border
     border: "1px solid rgba(255, 255, 255, 0.5)",
@@ -300,5 +303,117 @@ export const styles = {
     background: "#ffffff",
     color: "#0f172a",
     boxShadow: "0 2px 10px rgba(0, 0, 0, 0.06)",
+  },
+
+  // SEARCH BAR
+  searchWrapper: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+  },
+  searchIcon: {
+    position: "absolute",
+    left: "18px",
+    color: "#94a3b8",
+    pointerEvents: "none",
+    zIndex: 1,
+  },
+  searchInput: {
+    width: "100%",
+    padding: "16px 48px 16px 48px",
+    borderRadius: "16px",
+    background: "rgba(255, 255, 255, 0.7)",
+    border: "1px solid rgba(203, 213, 225, 0.6)",
+    color: "#0f172a",
+    outline: "none",
+    fontSize: "14px",
+    fontFamily: "'DM Sans', sans-serif",
+    boxSizing: "border-box",
+    transition: "all 0.3s ease",
+    boxShadow:
+      "inset 0 2px 6px rgba(15, 23, 42, 0.02), 0 1px 0 rgba(255, 255, 255, 0.8)",
+  },
+  searchClear: {
+    position: "absolute",
+    right: "14px",
+    background: "rgba(15, 23, 42, 0.06)",
+    border: "none",
+    borderRadius: "8px",
+    width: "28px",
+    height: "28px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    color: "#64748b",
+    fontSize: "12px",
+    fontWeight: 700,
+    transition: "all 0.2s",
+  },
+  resultCount: {
+    fontSize: "12px",
+    color: "#94a3b8",
+    marginTop: "10px",
+    marginLeft: "4px",
+    fontWeight: 500,
+  },
+
+  // REGISTRY CARDS
+  registryCard: {
+    padding: "22px 26px",
+    borderRadius: "18px",
+    background: "rgba(255, 255, 255, 0.65)",
+    backdropFilter: "blur(12px)",
+    border: "1px solid rgba(226, 232, 240, 0.7)",
+    boxShadow: `
+      0 4px 16px rgba(15, 23, 42, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8)
+    `,
+    transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+  },
+  registryDetail: {
+    display: "flex",
+    alignItems: "baseline",
+    gap: "10px",
+    padding: "4px 0",
+  },
+  registryDetailLabel: {
+    fontSize: "11px",
+    fontWeight: 700,
+    color: "#94a3b8",
+    textTransform: "uppercase",
+    letterSpacing: "0.6px",
+    minWidth: "90px",
+    flexShrink: 0,
+  },
+  registryCode: {
+    fontSize: "13px",
+    fontFamily: "'DM Mono', monospace",
+    color: "#334155",
+    background: "rgba(15, 23, 42, 0.04)",
+    padding: "2px 8px",
+    borderRadius: "6px",
+    wordBreak: "break-all",
+  },
+
+  // STATE BOXES
+  stateBox: {
+    textAlign: "center",
+    padding: "48px",
+    background: "rgba(255,255,255,0.5)",
+    borderRadius: "16px",
+    border: "1px solid #e2e8f0",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  spinner: {
+    width: "32px",
+    height: "32px",
+    border: "3px solid #e2e8f0",
+    borderTopColor: "#0f172a",
+    borderRadius: "50%",
+    animation: "spin 0.8s linear infinite",
   },
 };

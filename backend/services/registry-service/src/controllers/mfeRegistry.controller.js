@@ -48,4 +48,54 @@ const getMfes = async (req, res) => {
   }
 };
 
-module.exports = { createMfe, getMfes };
+/**
+ * Updates an existing MFE registry entry by ID.
+ * Restricted to safe fields so as not to break the core integration.
+ */
+const updateMfe = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, description, remoteUrl, isActive } = req.body;
+
+    const updateData = {};
+    if (name !== undefined) updateData.name = name.trim();
+    if (description !== undefined) updateData.description = description?.trim();
+    if (remoteUrl !== undefined) updateData.remoteUrl = remoteUrl.trim();
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const mfe = await MfeRegistry.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!mfe) {
+      return res.status(404).json({ error: "MFE not found" });
+    }
+
+    res.json(mfe);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/**
+ * Searches MFEs by a query string, returning top 10 matches.
+ */
+const searchMfes = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+    const regex = new RegExp(q, 'i');
+    const mfes = await MfeRegistry.find({
+      $or: [
+        { name: regex },
+        { feature: regex },
+        { route: regex },
+        { module: regex },
+        { description: regex }
+      ]
+    }).limit(10).sort({ createdAt: -1 });
+    res.json(mfes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+module.exports = { createMfe, getMfes, updateMfe, searchMfes };

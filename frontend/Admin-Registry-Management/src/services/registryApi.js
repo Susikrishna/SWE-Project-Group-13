@@ -22,3 +22,23 @@ export const fetchMicroservices = async () => {
 export const fetchMicrofrontends = async () => {
   return await apiClient.get(ENDPOINTS.REGISTRY.MFES);
 };
+
+// PUT: Update Microservice
+export const updateMicroservice = async (id, payload) => {
+  return await apiClient.put(`${ENDPOINTS.REGISTRY.SERVICES}/${id}`, payload);
+};
+
+// PUT: Update Microfrontend
+export const updateMicrofrontend = async (id, payload) => {
+  return await apiClient.put(`${ENDPOINTS.REGISTRY.MFES}/${id}`, payload);
+};
+
+// GET: Search Microservices
+export const searchMicroservices = async (query) => {
+  return await apiClient.get(`${ENDPOINTS.REGISTRY.SERVICES_SEARCH}?q=${encodeURIComponent(query)}`);
+};
+
+// GET: Search Microfrontends
+export const searchMicrofrontends = async (query) => {
+  return await apiClient.get(`${ENDPOINTS.REGISTRY.MFES_SEARCH}?q=${encodeURIComponent(query)}`);
+};
