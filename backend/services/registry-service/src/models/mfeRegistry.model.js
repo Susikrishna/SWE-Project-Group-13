@@ -22,6 +22,10 @@ const mfeSchema = new mongoose.Schema(
         isActive: { type: Boolean, default: true },
       }
     ],
+
+    // List of API permission keys that this MFE is authorized to use.
+    // This supports the 'Hard Restriction' policy where only mapped APIs can be assigned.
+    allowedPermissions: [String],
     
     // The CDN or hosted URL serving the remote javascript (e.g., 'https://cdn.com/user.js')
     remoteUrl: { type: String, required: true }, 

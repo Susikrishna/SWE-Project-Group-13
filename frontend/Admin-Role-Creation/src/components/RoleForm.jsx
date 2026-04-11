@@ -15,25 +15,26 @@ function RoleForm() {
     // State for flattened permissions
     const [selectedPermissions, setSelectedPermissions] = useState(new Set());
     const [selectedMfes, setSelectedMfes] = useState(new Set());
+    const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set()); // Whitelist for hard restriction
 
     useEffect(() => {
         const fetchRegistries = async () => {
             try {
                 // Fetch from the updated Registry Service on Port 3001
                 const [mfeRes, svcRes] = await Promise.all([
-                    axios.get("http://localhost:3001/registry/mfes"),
-                    axios.get("http://localhost:3001/registry/services")
+                    axios.get(`${registryUrl}/registry/mfes`),
+                    axios.get(`${registryUrl}/registry/services`)
                 ]);
                 
                 const mfes = mfeRes.data.map(m => ({
                     id: m.feature,
                     label: m.name,
+                    allowedPermissions: m.allowedPermissions || [],
                     components: (m.components || []).map(c => ({
                         name: c.name,
                         route: c.route,
                         componentKey: `${m.feature}::${c.route}`
                     }))
-
                 }));
                 
                 const groupedServices = {};
@@ -64,24 +65,73 @@ function RoleForm() {
         fetchRegistries();
     }, []);
     
+    // Update whitelist whenever MFEs change
+    useEffect(() => {
+        const activeFeatures = new Set();
+        selectedMfes.forEach(key => activeFeatures.add(key.split("::")[0]));
+        
+        const newWhitelist = new Set();
+        activeFeatures.forEach(fid => {
+            const mfe = microfrontends.find(m => m.id === fid);
+            if (mfe) mfe.allowedPermissions.forEach(p => newWhitelist.add(p));
+        });
+
+        setAllowedPermissionsWhitelist(newWhitelist);
+
+        // Hard Restriction: Remove any selected permissions that are no longer in the whitelist
+        setSelectedPermissions(prev => {
+            const next = new Set();
+            prev.forEach(p => {
+                if (newWhitelist.has(p)) next.add(p);
+            });
+            return next;
+        });
+    }, [selectedMfes, microfrontends]);
+
     const toggleMfe = (mfeId, components) => {
         const hasAny = components.some(c => selectedMfes.has(c.componentKey));
+        const mfe = microfrontends.find(m => m.id === mfeId);
+
         setSelectedMfes(prev => {
             const next = new Set(prev);
             if (hasAny) {
                 components.forEach(c => next.delete(c.componentKey));
             } else {
                 components.forEach(c => next.add(c.componentKey));
+                // Default Assignment: Add all related permissions when MFE is selected
+                if (mfe) {
+                    setSelectedPermissions(pPrev => {
+                        const pNext = new Set(pPrev);
+                        mfe.allowedPermissions.forEach(p => pNext.add(p));
+                        return pNext;
+                    });
+                }
             }
             return next;
         });
     };
     
     const toggleComponent = (componentKey) => {
+        const mfeId = componentKey.split("::")[0];
+        const mfe = microfrontends.find(m => m.id === mfeId);
+        
         setSelectedMfes(prev => {
             const next = new Set(prev);
+            const isAdding = !next.has(componentKey);
             if (next.has(componentKey)) next.delete(componentKey);
             else next.add(componentKey);
+
+            // If adding the VERY FIRST component of this MFE, auto-select its permissions
+            if (isAdding) {
+                const alreadySelectedAny = Array.from(prev).some(k => k.startsWith(mfeId + "::"));
+                if (!alreadySelectedAny && mfe) {
+                    setSelectedPermissions(pPrev => {
+                        const pNext = new Set(pPrev);
+                        mfe.allowedPermissions.forEach(p => pNext.add(p));
+                        return pNext;
+                    });
+                }
+            }
             return next;
         });
     };
@@ -126,7 +176,7 @@ function RoleForm() {
         };
 
         try {
-            await axios.post("http://localhost:3002/roles", roleData, {
+            await axios.post(`${serverUrl}/roles`, roleData, {
                 headers: { "Content-Type": "application/json" },
             });
             alert(`Role "${roleName}" created successfully!`);
@@ -214,22 +264,27 @@ function RoleForm() {
                     )}
 
                     <div className="form-divider" />
-                    <p className="section-title">Microservice Access</p>
+                    <p className="section-title">Microservice Access (Filtered by MFE selection)</p>
                     {loading ? (
                         <p className="status-text">Loading services...</p>
                     ) : error ? (
                         <p className="status-text error">{error}</p>
-                    ) : microservices.length === 0 ? (
-                        <p className="status-text">No microservices registered.</p>
+                    ) : selectedMfes.size === 0 ? (
+                        <p className="status-text warning">Select a Microfrontend first to enable related API permissions.</p>
                     ) : (
                         <div className="service-list">
                             {microservices.map((item) => {
-                                const hasAny = item.permissions.some(p => selectedPermissions.has(p.permissionKey));
+                                // Filter permissions to ONLY those in the whitelist
+                                const filteredPermissions = item.permissions.filter(p => allowedPermissionsWhitelist.has(p.permissionKey));
+                                
+                                if (filteredPermissions.length === 0) return null;
+
+                                const hasAny = filteredPermissions.some(p => selectedPermissions.has(p.permissionKey));
                                 return (
                                     <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
                                         <div
                                             className="service-header"
-                                            onClick={() => toggleServiceExpand(item.id, item.permissions)}
+                                            onClick={() => toggleServiceExpand(item.id, filteredPermissions)}
                                         >
                                             <input type="checkbox" checked={hasAny} readOnly />
                                             <span className="service-name">{item.label}</span>
@@ -238,7 +293,7 @@ function RoleForm() {
                                             <div className="actions-list">
                                                 <p className="actions-title">Resource List:</p>
                                                 <div className="actions-grid">
-                                                    {item.permissions.map((perm) => {
+                                                    {filteredPermissions.map((perm) => {
                                                         const isSelected = selectedPermissions.has(perm.permissionKey);
                                                         return (
                                                             <div

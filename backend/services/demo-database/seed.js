@@ -53,6 +53,15 @@ db.mferegistries.insertMany([
     name: "Dashboard App",
     feature: "dashboard-mfe",
     route: "/dashboard",
+    components: [
+      { name: "Main Stats", route: "/stats" },
+      { name: "User Profile", route: "/profile" }
+    ],
+    allowedPermissions: [
+      "user-service:user:read", "user-service:user:update",
+      "billing-service:invoice:read", "billing-service:subscription:read",
+      "notification-service:notification:read"
+    ],
     remoteUrl: "http://localhost:5000/assets/remoteEntry.js",
     module: "./DashboardApp",
     description: "Main user-facing dashboard microfrontend."
@@ -61,6 +70,15 @@ db.mferegistries.insertMany([
     name: "Admin Panel",
     feature: "admin-mfe",
     route: "/admin",
+    components: [
+      { name: "User Management", route: "/users" },
+      { name: "Permissions Overview", route: "/permissions" }
+    ],
+    allowedPermissions: [
+      "auth-service:session:create", "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
+      "user-service:user:read", "user-service:user:create", "user-service:user:update", "user-service:user:delete", "user-service:user:list",
+      "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage"
+    ],
     remoteUrl: "http://localhost:5001/assets/remoteEntry.js",
     module: "./AdminApp",
     description: "Internal admin interface for managing users and configuration."
@@ -69,6 +87,14 @@ db.mferegistries.insertMany([
     name: "Analytics Dashboard",
     feature: "analytics-mfe",
     route: "/analytics",
+    components: [
+      { name: "Sales Reports", route: "/sales" },
+      { name: "System Metrics", route: "/metrics" }
+    ],
+    allowedPermissions: [
+      "billing-service:invoice:read", "billing-service:subscription:read", "billing-service:payment:refund",
+      "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
+    ],
     remoteUrl: "http://localhost:5002/assets/remoteEntry.js",
     module: "./AnalyticsApp",
     description: "Business intelligence and analytics microfrontend."
