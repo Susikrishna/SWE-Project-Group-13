@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { styles } from "../styles/registryTheme";
-import { registerService } from "../services/registryApi";
+import { registerService, fetchMicroservices } from "../services/registryApi";
 import { LoadingOverlay, SuccessModal, FailureModal } from "./FeedbackModals";
 
-const emptyComponent = { name: "", route: "", isActive: true };
+const emptyComponent = { name: "", route: "", description: "", isActive: true, allowedPermissions: [] };
 
 const MicrofrontendForm = () => {
   const initialState = {
@@ -19,6 +19,75 @@ const MicrofrontendForm = () => {
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const [failureMessage, setFailureMessage] = useState(null);
+  
+  const [allApis, setAllApis] = useState([]);
+  const [apiSearchQuery, setApiSearchQuery] = useState('');
+  const [loadingApis, setLoadingApis] = useState(false);
+
+  // Fetch all APIs once on mount
+  useEffect(() => {
+    let isMounted = true;
+    const loadApis = async () => {
+      setLoadingApis(true);
+      try {
+        const res = await fetchMicroservices();
+        if (isMounted) {
+          const fetchedApis = Array.isArray(res) ? res : res?.data || [];
+          setAllApis(fetchedApis);
+        }
+      } catch (e) {
+        console.error("Failed to load APIs", e);
+      } finally {
+        if (isMounted) setLoadingApis(false);
+      }
+    };
+    loadApis();
+    return () => { isMounted = false; };
+  }, []);
+
+  // Group APIs by service
+  const groupedApis = allApis.reduce((acc, api) => {
+    if (!acc[api.service]) acc[api.service] = [];
+    acc[api.service].push(api);
+    return acc;
+  }, {});
+
+  // Filter services by search query
+  const filteredServices = Object.keys(groupedApis).filter(service => 
+    service.toLowerCase().includes(apiSearchQuery.toLowerCase())
+  );
+  
+  const displayedServices = apiSearchQuery.trim() ? filteredServices : filteredServices.slice(0, 5);
+
+  const toggleComponentServiceExpand = (compIndex, serviceName, apis) => {
+    setComponents((prev) => {
+      const newComps = [...prev];
+      const comp = { ...newComps[compIndex] };
+      const hasAny = apis.some((a) => comp.allowedPermissions.includes(a.permissionKey));
+      let nextPerms = new Set(comp.allowedPermissions);
+      if (hasAny) {
+        apis.forEach((a) => nextPerms.delete(a.permissionKey));
+      } else {
+        apis.forEach((a) => nextPerms.add(a.permissionKey));
+      }
+      comp.allowedPermissions = Array.from(nextPerms);
+      newComps[compIndex] = comp;
+      return newComps;
+    });
+  };
+
+  const toggleComponentPermission = (compIndex, permKey) => {
+    setComponents((prev) => {
+      const newComps = [...prev];
+      const comp = { ...newComps[compIndex] };
+      let nextPerms = new Set(comp.allowedPermissions);
+      if (nextPerms.has(permKey)) nextPerms.delete(permKey);
+      else nextPerms.add(permKey);
+      comp.allowedPermissions = Array.from(nextPerms);
+      newComps[compIndex] = comp;
+      return newComps;
+    });
+  };
 
   const handleInputChange = (e) => {
     const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
@@ -53,6 +122,7 @@ const MicrofrontendForm = () => {
       module: formData.module,
       isActive: formData.isActive,
       comps: components,
+      allowedPermissions: [],
     };
     try {
       const data = await registerService(payload, "microfrontend");
@@ -149,6 +219,8 @@ const MicrofrontendForm = () => {
             Active — {formData.isActive ? "Published immediately" : "Draft / hidden"}
           </span>
         </label>
+
+        {/* ── Required APIs & Permissions has moved to Component level ── */}
 
         {/* ── Components Section ── */}
         <div style={formStyles.section}>
@@ -273,6 +345,86 @@ const MicrofrontendForm = () => {
                       required
                     />
                   </div>
+                  <div style={{ ...formStyles.fieldGroup, gridColumn: "1 / -1" }}>
+                    <label style={formStyles.fieldLabel}>Description (Optional)</label>
+                    <input
+                      name="description"
+                      value={comp.description || ""}
+                      onChange={(e) => handleComponentChange(index, e)}
+                      placeholder="e.g. Represents the user listing interface"
+                      style={formStyles.fieldInput}
+                    />
+                  </div>
+
+                  {/* API Mapping inside Component */}
+                  <div style={{ gridColumn: "1 / -1", marginTop: "12px", borderTop: "1px dashed #cbd5e1", paddingTop: "12px" }}>
+                    <p style={{...formStyles.sectionTitle, fontSize: "12px"}}>Component APIs</p>
+                    <p style={{...formStyles.sectionSub, marginBottom: "12px"}}>Select backend APIs this specific component needs to access.</p>
+                    
+                    {/* Search Bar */}
+                    <div style={{ marginBottom: "16px" }}>
+                      <input
+                        type="text"
+                        placeholder="Search services (e.g. user-svc)..."
+                        value={apiSearchQuery}
+                        onChange={(e) => setApiSearchQuery(e.target.value)}
+                        style={{...formStyles.fieldInput, padding: "8px 12px", fontSize: "12px"}}
+                      />
+                    </div>
+
+                    {loadingApis ? (
+                      <p style={{ fontSize: "12px", color: "#64748b" }}>Loading services...</p>
+                    ) : displayedServices.length === 0 ? (
+                      <p style={{ fontSize: "12px", color: "#64748b" }}>
+                        {apiSearchQuery.trim() ? "No services match your search." : "No services available."}
+                      </p>
+                    ) : (
+                      <div className="service-list">
+                        {displayedServices.map((serviceName) => {
+                          const apis = groupedApis[serviceName];
+                          const hasAny = apis.some(api => (comp.allowedPermissions || []).includes(api.permissionKey));
+                          
+                          return (
+                            <div key={serviceName} className={`service-card ${hasAny ? "checked" : ""}`}>
+                              <div
+                                className="service-header"
+                                onClick={() => toggleComponentServiceExpand(index, serviceName, apis)}
+                                style={{ padding: "10px 12px" }}
+                              >
+                                <input type="checkbox" checked={hasAny} readOnly />
+                                <span className="service-name" style={{ fontSize: "13px" }}>{serviceName.toUpperCase()}</span>
+                              </div>
+                              
+                              {hasAny && (
+                                <div className="actions-list" style={{ padding: "10px 12px" }}>
+                                  <div className="actions-grid">
+                                    {apis.map((api) => {
+                                      const isSelected = (comp.allowedPermissions || []).includes(api.permissionKey);
+                                      return (
+                                        <div
+                                          key={api.permissionKey}
+                                          className={`action-chip ${isSelected ? "selected" : ""}`}
+                                          style={{ padding: "6px 8px", fontSize: "12px" }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleComponentPermission(index, api.permissionKey);
+                                          }}
+                                        >
+                                          <input type="checkbox" checked={isSelected} readOnly />
+                                          <span className="action-name">{api.resource} :&nbsp;</span>
+                                          <span className="action-desc">{api.action}</span>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -291,6 +443,107 @@ const MicrofrontendForm = () => {
           box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.1) !important;
           background: #fff !important;
           outline: none;
+        }
+        .service-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+        .service-card {
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          background: #fafafa;
+          transition: border 0.2s, background 0.2s;
+        }
+        .service-card.checked {
+          border-color: #090649;
+          background: #eef2ff;
+        }
+        .service-header {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 16px;
+          cursor: pointer;
+        }
+        .service-header:hover {
+          background: #eef0fd;
+          border-radius: 10px;
+        }
+        .service-header input {
+          appearance: none;
+          width: 17px;
+          height: 17px;
+          border-radius: 5px;
+          border: 1.5px solid #d1d5db;
+          background: white;
+          margin: 0;
+          cursor: pointer;
+        }
+        .service-header input:checked {
+          background: #090649;
+          border-color: #040220;
+        }
+        .service-name {
+          font-weight: 600;
+          color: #111827;
+          font-size: 14px;
+        }
+        .actions-list {
+          padding: 14px 16px 18px 16px;
+          border-top: 1px solid #e5e7eb;
+        }
+        .actions-title {
+          font-size: 12px;
+          color: #6b7280;
+          margin-bottom: 10px;
+          font-weight: 600;
+        }
+        .actions-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+          gap: 8px;
+        }
+        .action-chip {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 10px;
+          border-radius: 7px;
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
+          cursor: pointer;
+          font-size: 13px;
+          font-family: 'DM Mono', monospace;
+          transition: all 0.15s;
+        }
+        .action-chip:hover {
+          background: #eef0fd;
+          border-color: #c7d0fb;
+        }
+        .action-chip.selected {
+          background: #eef2ff;
+          border-color: #090649;
+        }
+        .action-chip input {
+          appearance: none;
+          width: 15px;
+          height: 15px;
+          border-radius: 4px;
+          border: 1.5px solid #d1d5db;
+          margin: 0;
+          cursor: pointer;
+        }
+        .action-chip input:checked {
+          background: #090649;
+          border-color: #040220;
+        }
+        .action-name {
+          font-weight: 600;
+          color: #0f172a;
+        }
+        .action-desc {
+          color: #6b7280;
         }
       `}</style>
     </>

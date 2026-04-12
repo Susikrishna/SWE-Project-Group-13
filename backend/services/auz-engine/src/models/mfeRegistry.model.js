@@ -19,7 +19,9 @@ const mfeSchema = new mongoose.Schema(
       {
         name: { type: String, required: true },
         route: { type: String, required: true },
+        description: { type: String },
         isActive: { type: Boolean, default: true },
+        allowedPermissions: { type: [String], default: [] },
       }
     ],
     

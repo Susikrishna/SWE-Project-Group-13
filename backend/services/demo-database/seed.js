@@ -54,14 +54,25 @@ db.mferegistries.insertMany([
     feature: "dashboard-mfe",
     route: "/dashboard",
     components: [
-      { name: "Main Stats", route: "/stats" },
-      { name: "User Profile", route: "/profile" }
+      { 
+        name: "Main Stats", 
+        route: "/stats",
+        description: "Dashboard statistics overview",
+        allowedPermissions: [
+          "billing-service:invoice:read", "billing-service:subscription:read",
+          "notification-service:notification:read"
+        ]
+      },
+      { 
+        name: "User Profile", 
+        route: "/profile",
+        description: "Manage personal profile settings",
+        allowedPermissions: [
+          "user-service:user:read", "user-service:user:update"
+        ]
+      }
     ],
-    allowedPermissions: [
-      "user-service:user:read", "user-service:user:update",
-      "billing-service:invoice:read", "billing-service:subscription:read",
-      "notification-service:notification:read"
-    ],
+    allowedPermissions: [],
     remoteUrl: "http://localhost:5000/assets/remoteEntry.js",
     module: "./DashboardApp",
     description: "Main user-facing dashboard microfrontend."
@@ -71,14 +82,25 @@ db.mferegistries.insertMany([
     feature: "admin-mfe",
     route: "/admin",
     components: [
-      { name: "User Management", route: "/users" },
-      { name: "Permissions Overview", route: "/permissions" }
+      { 
+        name: "User Management", 
+        route: "/users",
+        description: "Manage platform users and sessions",
+        allowedPermissions: [
+          "auth-service:session:create", "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
+          "user-service:user:read", "user-service:user:create", "user-service:user:update", "user-service:user:delete", "user-service:user:list"
+        ]
+      },
+      { 
+        name: "Permissions Overview", 
+        route: "/permissions",
+        description: "Notification and permission templates",
+        allowedPermissions: [
+          "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage"
+        ]
+      }
     ],
-    allowedPermissions: [
-      "auth-service:session:create", "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
-      "user-service:user:read", "user-service:user:create", "user-service:user:update", "user-service:user:delete", "user-service:user:list",
-      "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage"
-    ],
+    allowedPermissions: [],
     remoteUrl: "http://localhost:5001/assets/remoteEntry.js",
     module: "./AdminApp",
     description: "Internal admin interface for managing users and configuration."
@@ -88,13 +110,24 @@ db.mferegistries.insertMany([
     feature: "analytics-mfe",
     route: "/analytics",
     components: [
-      { name: "Sales Reports", route: "/sales" },
-      { name: "System Metrics", route: "/metrics" }
+      { 
+        name: "Sales Reports", 
+        route: "/sales",
+        description: "Billing and invoice analytics",
+        allowedPermissions: [
+          "billing-service:invoice:read", "billing-service:subscription:read", "billing-service:payment:refund"
+        ]
+      },
+      { 
+        name: "System Metrics", 
+        route: "/metrics",
+        description: "System performance reports",
+        allowedPermissions: [
+          "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
+        ]
+      }
     ],
-    allowedPermissions: [
-      "billing-service:invoice:read", "billing-service:subscription:read", "billing-service:payment:refund",
-      "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
-    ],
+    allowedPermissions: [],
     remoteUrl: "http://localhost:5002/assets/remoteEntry.js",
     module: "./AnalyticsApp",
     description: "Business intelligence and analytics microfrontend."

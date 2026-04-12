@@ -33,8 +33,17 @@ const createRole = async (req, res) => {
             
             const whitelist = new Set();
             registries.forEach(reg => {
+                // Fallback to MFE root permissions if any
                 if (reg.allowedPermissions) {
                     reg.allowedPermissions.forEach(p => whitelist.add(p));
+                }
+                // Include component-level permissions
+                if (reg.components && Array.isArray(reg.components)) {
+                    reg.components.forEach(comp => {
+                        if (comp.allowedPermissions) {
+                            comp.allowedPermissions.forEach(p => whitelist.add(p));
+                        }
+                    });
                 }
             });
 
