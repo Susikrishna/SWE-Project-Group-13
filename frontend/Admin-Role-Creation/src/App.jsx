@@ -9,7 +9,7 @@ import CreateRolePage from './pages/CreateRole';
 import Roles from './pages/Roles';
 import Home from './pages/Home';
 import UserRoleManager from './pages/UserRoleManager';
-import LogStats from './pages/LogStats';
+import Audit from './pages/Audit';
 
 function App() {
   return (
@@ -18,7 +18,7 @@ function App() {
       <Route path="/newRole" element={<CreateRolePage />} />
       <Route path="/role" element={<Roles />} />
       <Route path="/userToRole" element={<UserRoleManager />} />
-      <Route path="/logs" element={<LogStats/>}/>
+      <Route path="/audit" element={<Audit/>}/>
     </Routes>
   );
 }

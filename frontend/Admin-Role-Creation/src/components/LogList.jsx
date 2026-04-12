@@ -1,29 +1,51 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios"
+import axios from "axios";
+
+const RESPONSES = {
+    ALLOW: "ALLOW",
+    DENY: "DENY",
+    NA: "NA",
+};
+
 const LogList = () => {
     const [logs, setLogs] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [searchRole, setSearchRole] = useState("");
+    const [statusSearch, setStatusSearch] = useState(0);
+    const [responseSearch, setResponseSearch] = useState(RESPONSES.NA);
 
     const fetchLogs = async () => {
         try {
             const res = await axios.get("http://localhost:3000/log");
-            
-            if (!res.data.success) {
-                throw new Error(res.data.message);
-            }
-
+            if (!res.data.success) throw new Error(res.data.message);
             setLogs(res.data.data);
         } catch (err) {
             setError(err.response?.data?.message || err.message);
-        } finally {
-            setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchLogs();
     }, []);
+
+    const filteredLogs = logs.filter((log) => {
+        const matchesRole =
+            searchRole.trim() === ""
+                ? true
+                : (log.roleId || "").toLowerCase().includes(searchRole.trim().toLowerCase());
+
+        const matchesStatus =
+            statusSearch === 0
+                ? true
+                : Number(log.statusCode) === statusSearch;
+
+        const matchesResponse =
+            responseSearch === RESPONSES.NA
+                ? true
+                : log.decision === responseSearch;
+
+        return matchesRole && matchesStatus && matchesResponse;
+    });
 
     return (
         <div className="role-container">
@@ -34,61 +56,103 @@ const LogList = () => {
                     <h2>System Logs</h2>
                 </div>
 
-                {loading && <p className="status-text">Loading logs...</p>}
+                <div className="form-group">
+                    <label>Search by Role</label>
+                    <input
+                        type="text"
+                        placeholder="Enter role ID..."
+                        value={searchRole}
+                        onChange={(e) => setSearchRole(e.target.value)}
+                    />
+                </div>
+
+                <div className="dropdown">
+                    <span>Filter by Decision</span>
+                    <select
+                        value={responseSearch}
+                        onChange={(e) => setResponseSearch(e.target.value)}
+                    >
+                        <option value={RESPONSES.NA}>All</option>
+                        <option value={RESPONSES.ALLOW}>ALLOW</option>
+                        <option value={RESPONSES.DENY}>DENY</option>
+                    </select>
+                </div>
+
+                <div className="dropdown">
+                    <span>Filter by Status</span>
+                    <select
+                        value={statusSearch}
+                        onChange={(e) => setStatusSearch(Number(e.target.value))}
+                    >
+                        <option value={0}>All</option>
+                        <option value={200}>200 - OK</option>
+                        <option value={201}>201 - Created</option>
+                        <option value={400}>400 - Bad Request</option>
+                        <option value={401}>401 - Unauthorized</option>
+                        <option value={403}>403 - Forbidden</option>
+                        <option value={404}>404 - Not Found</option>
+                        <option value={500}>500 - Internal Server Error</option>
+                    </select>
+                </div>
+
                 {error && <p className="status-text error">{error}</p>}
 
-                {!loading && !error && (
+                {!error && (
                     <div className="service-list">
-                        {logs.map((log, index) => (
-                            <div key={index} className="service-card">
-                                <div className="service-header">
-                                    <div className="service-name">
-                                        {log.action || "BULK ACTION"}
+                        {filteredLogs.length === 0 ? (
+                            <p className="status-text">No logs found.</p>
+                        ) : (
+                            filteredLogs.map((log, index) => (
+                                <div key={index} className="service-card">
+                                    <div className="service-header">
+                                        <div className="service-name">
+                                            {log.action || "BULK ACTION"}
+                                        </div>
+                                        <div className="service-id">
+                                            {new Date(log.timestamp).toLocaleString()}
+                                        </div>
                                     </div>
-                                    <div className="service-id">
-                                        {new Date(log.timestamp).toLocaleString()}
-                                    </div>
-                                </div>
 
-                                <div className="actions-list">
-                                    <div className="actions-grid">
+                                    <div className="actions-list">
+                                        <div className="actions-grid">
 
-                                        <div className="action-chip">
-                                            <span className="action-name">User</span>
-                                            <span className="action-desc">{log.userId}</span>
-                                        </div>
-
-                                        <div className="action-chip">
-                                            <span className="action-name">Role</span>
-                                            <span className="action-desc">{log.roleId}</span>
-                                        </div>
-
-                                        <div className="action-chip">
-                                            <span className="action-name">Permission</span>
-                                            <span className="action-desc">{log.permission}</span>
-                                        </div>
-
-                                        <div className={`action-chip ${log.decision === "DENY" ? "selected" : ""}`}>
-                                            <span className="action-name">Decision</span>
-                                            <span className="action-desc">{log.decision}</span>
-                                        </div>
-
-                                        <div className="action-chip">
-                                            <span className="action-name">Status</span>
-                                            <span className="action-desc">{log.statusCode}</span>
-                                        </div>
-
-                                        {log.reason && (
                                             <div className="action-chip">
-                                                <span className="action-name">Reason</span>
-                                                <span className="action-desc">{log.reason}</span>
+                                                <span className="action-name">User</span>
+                                                <span className="action-desc">{log.userId}</span>
                                             </div>
-                                        )}
 
+                                            <div className="action-chip">
+                                                <span className="action-name">Role</span>
+                                                <span className="action-desc">{log.roleId}</span>
+                                            </div>
+
+                                            <div className="action-chip">
+                                                <span className="action-name">Permission</span>
+                                                <span className="action-desc">{log.permission}</span>
+                                            </div>
+
+                                            <div className={`action-chip ${log.decision === "DENY" ? "selected" : ""}`}>
+                                                <span className="action-name">Decision</span>
+                                                <span className="action-desc">{log.decision}</span>
+                                            </div>
+
+                                            <div className="action-chip">
+                                                <span className="action-name">Status</span>
+                                                <span className="action-desc">{log.statusCode}</span>
+                                            </div>
+
+                                            {log.reason && (
+                                                <div className="action-chip">
+                                                    <span className="action-name">Reason</span>
+                                                    <span className="action-desc">{log.reason}</span>
+                                                </div>
+                                            )}
+
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 )}
             </div>
@@ -100,6 +164,43 @@ export default LogList;
 
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+.dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.dropdown span {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.dropdown select {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    color: #111827;
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.dropdown select:focus {
+    border-color: #070441;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    background: #ffffff;
+}
 
 .role-container {
     display: flex;

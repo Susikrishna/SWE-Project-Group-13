@@ -1,6 +1,6 @@
 import Navbar from "../components/Navbar"
 import LogList from "../components/LogList"
-function LogStats() {
+function Audit() {
     return (
         <>
             <Navbar />
@@ -8,4 +8,4 @@ function LogStats() {
         </>
     )
 }
-export default LogStats
+export default Audit
