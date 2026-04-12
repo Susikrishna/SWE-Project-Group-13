@@ -4,12 +4,13 @@ import { fetchMicroservices, fetchMicrofrontends, searchMicroservices, searchMic
 import RegistryCard from "../components/RegistryCard";
 import EditRegistryModal from "../components/EditRegistryModal";
 
-
-const MAX_SEARCH_RESULTS = 10;
-const DEFAULT_DISPLAY_COUNT = 10;
+const ITEMS_PER_PAGE = 10;
 
 const RegistryListPage = () => {
-  const [displayedItems, setDisplayedItems] = useState([]);
+  const [apiItems, setApiItems] = useState([]);
+  const [mfeItems, setMfeItems] = useState([]);
+  const [activeTab, setActiveTab] = useState("MFE"); // 'MFE' or 'API'
+  const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -21,6 +22,7 @@ const RegistryListPage = () => {
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(search.trim());
+      setCurrentPage(1); // Reset page on search
     }, 400);
     return () => clearTimeout(handler);
   }, [search]);
@@ -50,23 +52,20 @@ const RegistryListPage = () => {
 
         if (!isMounted) return;
 
-        const apiItems = (Array.isArray(apisRes) ? apisRes : apisRes?.data || []).map((a) => ({
+        const mappedApis = (Array.isArray(apisRes) ? apisRes : apisRes?.data || []).map((a) => ({
           ...a,
           _type: "API",
           _sortKey: (a.service || "").toLowerCase(),
-        }));
-        const mfeItems = (Array.isArray(mfesRes) ? mfesRes : mfesRes?.data || []).map((m) => ({
+        })).sort((a, b) => a._sortKey.localeCompare(b._sortKey));
+
+        const mappedMfes = (Array.isArray(mfesRes) ? mfesRes : mfesRes?.data || []).map((m) => ({
           ...m,
           _type: "MFE",
           _sortKey: (m.name || m.feature || "").toLowerCase(),
-        }));
+        })).sort((a, b) => a._sortKey.localeCompare(b._sortKey));
 
-        let combined = [...apiItems, ...mfeItems].sort((a, b) =>
-          a._sortKey.localeCompare(b._sortKey)
-        );
-        combined = combined.slice(0, debouncedSearch ? MAX_SEARCH_RESULTS : DEFAULT_DISPLAY_COUNT);
-
-        setDisplayedItems(combined);
+        setApiItems(mappedApis);
+        setMfeItems(mappedMfes);
       } catch (err) {
         if (isMounted) setError(err.message || "Failed to load registry data");
       } finally {
@@ -87,6 +86,16 @@ const RegistryListPage = () => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setCurrentPage(1); // Reset page on tab change
+  };
+
+  const currentDataset = activeTab === "MFE" ? mfeItems : apiItems;
+  const totalItems = currentDataset.length;
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  const displayedItems = currentDataset.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   return (
     <div style={styles.page}>
       <div style={styles.wave}></div>
@@ -96,8 +105,24 @@ const RegistryListPage = () => {
         <h1 style={styles.heading}>Registered Components</h1>
         <p style={styles.subHeading}>View all active APIs and MFEs in the ecosystem.</p>
 
+        {/* Tab Navigation */}
+        <div style={localStyles.tabContainer}>
+          <button
+            style={activeTab === "MFE" ? localStyles.activeTab : localStyles.inactiveTab}
+            onClick={() => handleTabChange("MFE")}
+          >
+            Microfrontends ({mfeItems.length})
+          </button>
+          <button
+            style={activeTab === "API" ? localStyles.activeTab : localStyles.inactiveTab}
+            onClick={() => handleTabChange("API")}
+          >
+            API Registries ({apiItems.length})
+          </button>
+        </div>
+
         {/* Search Bar */}
-        <div style={{ position: "relative", marginBottom: "32px" }}>
+        <div style={{ position: "relative", marginBottom: "32px", marginTop: "16px" }}>
           <div style={styles.searchWrapper}>
             <svg
               style={styles.searchIcon}
@@ -117,7 +142,7 @@ const RegistryListPage = () => {
             <input
               id="registry-search-bar"
               type="text"
-              placeholder="Search by name, route, method, permission..."
+              placeholder={`Search ${activeTab === "MFE" ? "Microfrontends" : "APIs"}...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={styles.searchInput}
@@ -132,17 +157,6 @@ const RegistryListPage = () => {
               </button>
             )}
           </div>
-
-          {isSearching && !loading && (
-            <p style={styles.resultCount}>
-              Showing top {displayedItems.length} matching results from server
-            </p>
-          )}
-          {!isSearching && !loading && (
-            <p style={styles.resultCount}>
-              Showing default {displayedItems.length} components — use search to find specific items
-            </p>
-          )}
         </div>
 
         {/* Content */}
@@ -160,7 +174,7 @@ const RegistryListPage = () => {
         ) : displayedItems.length === 0 ? (
           <div style={styles.stateBox}>
             <p style={{ color: "#94a3b8", fontSize: "15px", fontWeight: 500 }}>
-              {isSearching ? "No results match your search query." : "No registered services found."}
+              {isSearching ? "No results match your search query." : `No ${activeTab} components found.`}
             </p>
           </div>
         ) : (
@@ -172,6 +186,29 @@ const RegistryListPage = () => {
                 onEdit={handleEdit}
               />
             ))}
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={localStyles.paginationContainer}>
+                <button
+                  style={{ ...localStyles.pageBtn, opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? "not-allowed" : "pointer" }}
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                >
+                  Prev
+                </button>
+                <div style={localStyles.pageIndicator}>
+                  Page {currentPage} of {totalPages}
+                </div>
+                <button
+                  style={{ ...localStyles.pageBtn, opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? "not-allowed" : "pointer" }}
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -192,6 +229,66 @@ const RegistryListPage = () => {
       `}</style>
     </div>
   );
+};
+
+const localStyles = {
+  tabContainer: {
+    display: "flex",
+    gap: "8px",
+    background: "rgba(241, 245, 249, 0.6)",
+    padding: "6px",
+    borderRadius: "14px",
+    marginBottom: "24px",
+  },
+  activeTab: {
+    flex: 1,
+    padding: "10px 16px",
+    border: "none",
+    borderRadius: "10px",
+    background: "#fff",
+    color: "#0f172a",
+    fontSize: "14px",
+    fontWeight: 700,
+    boxShadow: "0 2px 4px rgba(15, 23, 42, 0.06)",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  inactiveTab: {
+    flex: 1,
+    padding: "10px 16px",
+    border: "none",
+    borderRadius: "10px",
+    background: "transparent",
+    color: "#64748b",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  paginationContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: "20px",
+    paddingTop: "16px",
+    borderTop: "1px solid rgba(226, 232, 240, 0.8)",
+  },
+  pageBtn: {
+    padding: "8px 16px",
+    borderRadius: "8px",
+    border: "1px solid #cbd5e1",
+    background: "#fff",
+    color: "#475569",
+    fontSize: "13px",
+    fontWeight: 600,
+    fontFamily: "'DM Sans', sans-serif",
+    transition: "all 0.2s",
+  },
+  pageIndicator: {
+    fontSize: "13px",
+    fontWeight: 600,
+    color: "#64748b",
+  }
 };
 
 export default RegistryListPage;
