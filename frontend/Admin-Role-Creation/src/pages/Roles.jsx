@@ -14,6 +14,7 @@ function Roles() {
     const [editExpiresAt, setEditExpiresAt] = useState("");
     const [editSelectedPermissions, setEditSelectedPermissions] = useState(new Set());
     const [editSelectedMfes, setEditSelectedMfes] = useState(new Set());
+    const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set());
     const getRoles = async () => {
         try {
             const response = await axios.get("http://localhost:3002/roles");
@@ -39,19 +40,19 @@ function Roles() {
         const fetchRegistries = async () => {
             try {
                 const [mfeRes, svcRes] = await Promise.all([
-                    axios.get("http://localhost:3001/registry/mfes"),
-                    axios.get("http://localhost:3001/registry/services")
+                    axios.get(`${import.meta.env.VITE_REGISTRY_URL}/registry/mfes`),
+                    axios.get(`${import.meta.env.VITE_REGISTRY_URL}/registry/services`)
                 ]);
                 
                 const mfes = mfeRes.data.map(m => ({
                     id: m.feature,
                     label: m.name,
+                    allowedPermissions: m.allowedPermissions || [],
                     components: (m.components || []).map(c => ({
                         name: c.name,
                         route: c.route,
                         componentKey: `${m.feature}::${c.route}`
                     }))
-                
                 }));
                 
                 const groupedServices = {};
@@ -84,24 +85,73 @@ function Roles() {
         setEditingRole(null);
     };
     
-    const toggleMfe = (components) => {
+    // Whitelist management for edit mode
+    useEffect(() => {
+        const activeFeatures = new Set();
+        editSelectedMfes.forEach(key => activeFeatures.add(key.split("::")[0]));
+        
+        const newWhitelist = new Set();
+        activeFeatures.forEach(fid => {
+            const mfe = microfrontends.find(m => m.id === fid);
+            if (mfe) mfe.allowedPermissions.forEach(p => newWhitelist.add(p));
+        });
+
+        setAllowedPermissionsWhitelist(newWhitelist);
+
+        // Hard Restriction: Remove any selected permissions that are no longer in the whitelist
+        setEditSelectedPermissions(prev => {
+            const next = new Set();
+            prev.forEach(p => {
+                if (newWhitelist.has(p)) next.add(p);
+            });
+            return next;
+        });
+    }, [editSelectedMfes, microfrontends]);
+
+    const toggleMfe = (mfeId, components) => {
         const hasAny = components.some(c => editSelectedMfes.has(c.componentKey));
+        const mfe = microfrontends.find(m => m.id === mfeId);
+
         setEditSelectedMfes(prev => {
             const next = new Set(prev);
             if (hasAny) {
                 components.forEach(c => next.delete(c.componentKey));
             } else {
                 components.forEach(c => next.add(c.componentKey));
+                // Default Assignment: Add all related permissions when MFE is selected
+                if (mfe) {
+                    setEditSelectedPermissions(pPrev => {
+                        const pNext = new Set(pPrev);
+                        mfe.allowedPermissions.forEach(p => pNext.add(p));
+                        return pNext;
+                    });
+                }
             }
             return next;
         });
     };
 
     const toggleComponent = (componentKey) => {
+        const mfeId = componentKey.split("::")[0];
+        const mfe = microfrontends.find(m => m.id === mfeId);
+
         setEditSelectedMfes(prev => {
             const next = new Set(prev);
+            const isAdding = !next.has(componentKey);
             if (next.has(componentKey)) next.delete(componentKey);
             else next.add(componentKey);
+
+            // If adding the VERY FIRST component of this MFE, auto-select its permissions
+            if (isAdding) {
+                const alreadySelectedAny = Array.from(prev).some(k => k.startsWith(mfeId + "::"));
+                if (!alreadySelectedAny && mfe) {
+                    setEditSelectedPermissions(pPrev => {
+                        const pNext = new Set(pPrev);
+                        mfe.allowedPermissions.forEach(p => pNext.add(p));
+                        return pNext;
+                    });
+                }
+            }
             return next;
         });
     };
@@ -130,7 +180,7 @@ function Roles() {
     
     const handleDelete = async(roleId) =>{
         try{
-            const response = await axios.delete("http://localhost:3002/roles",{
+            const response = await axios.delete(`${serverUrl}/roles`,{
                 data:{roleId:roleId}
             });
             getRoles()
@@ -141,7 +191,7 @@ function Roles() {
     
     const handleSubmit = async () => {
         try {
-            await axios.put(`http://localhost:3002/roles`, {
+            await axios.put(`${serverUrl}/roles`, {
                 roleId: editingRole._id,
                 name: name,
                 description: editDescription,
@@ -256,7 +306,7 @@ function Roles() {
                                     const hasAny = item.components.some(c => editSelectedMfes.has(c.componentKey));
                                     return (
                                         <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                            <div className="service-header" onClick={() => toggleMfe(item.components)}>
+                                            <div className="service-header" onClick={() => toggleMfe(item.id, item.components)}>
                                                 <input type="checkbox" checked={hasAny} readOnly />
                                                 <span className="service-name">{item.label}</span>
                                             </div>
@@ -292,16 +342,23 @@ function Roles() {
 
                         <div className="form-divider" />
                         
-                        <p className="section-title">Microservice Access</p>
-                        { microservices.length === 0 ? (
+                        <p className="section-title">Microservice Access (Filtered by MFE selection)</p>
+                        { microfrontends.length > 0 && editSelectedMfes.size === 0 ? (
+                            <p className="status-text warning">Select a Microfrontend first to enable related API permissions.</p>
+                        ) : microservices.length === 0 ? (
                             <p className="status-text">No microservices registered.</p>
                         ) : (
                             <div className="service-list">
                                 {microservices.map((item) => {
-                                    const hasAny = item.permissions.some(p => editSelectedPermissions.has(p.permissionKey));
+                                    // Filter to whitelist
+                                    const filteredPermissions = item.permissions.filter(p => allowedPermissionsWhitelist.has(p.permissionKey));
+                                    
+                                    if (filteredPermissions.length === 0) return null;
+
+                                    const hasAny = filteredPermissions.some(p => editSelectedPermissions.has(p.permissionKey));
                                     return (
                                         <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                            <div className="service-header" onClick={() => toggleService(item.permissions)}>
+                                            <div className="service-header" onClick={() => toggleService(filteredPermissions)}>
                                                 <input type="checkbox" checked={hasAny} readOnly />
                                                 <span className="service-name">{item.label}</span>
                                             </div>
@@ -309,7 +366,7 @@ function Roles() {
                                                 <div className="actions-list">
                                                     <p className="actions-title">Resource List:</p>
                                                     <div className="actions-grid">
-                                                        {item.permissions.map((perm) => {
+                                                        {filteredPermissions.map((perm) => {
                                                             const isSelected = editSelectedPermissions.has(perm.permissionKey);
                                                             return (
                                                                 <div

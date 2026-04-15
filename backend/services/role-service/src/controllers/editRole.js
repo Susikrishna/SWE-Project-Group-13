@@ -1,4 +1,5 @@
 const Role = require("../models/Role");
+const MfeRegistry = require("../models/MfeRegistry");
 
 const editRoleById = async (req,res) =>{
     try{
@@ -13,6 +14,38 @@ const editRoleById = async (req,res) =>{
             mfeAccess : mfeAccess ?? [],
             isTemp : isTemp ?? false,
             expiresAt: isTemp ? expiresAt : null,
+        }
+
+        // Hard Restriction Validation
+        if (mfeAccess && mfeAccess.length > 0) {
+            const selectedFeatureIds = Array.from(new Set(mfeAccess.map(key => key.split("::")[0])));
+            const registries = await MfeRegistry.find({ feature: { $in: selectedFeatureIds } });
+            
+            const whitelist = new Set();
+            registries.forEach(reg => {
+                // Fallback to MFE root permissions if any
+                if (reg.allowedPermissions) {
+                    reg.allowedPermissions.forEach(p => whitelist.add(p));
+                }
+                // Include component-level permissions
+                if (reg.components && Array.isArray(reg.components)) {
+                    reg.components.forEach(comp => {
+                        if (comp.allowedPermissions) {
+                            comp.allowedPermissions.forEach(p => whitelist.add(p));
+                        }
+                    });
+                }
+            });
+
+            const unauthorized = (permissions ?? []).filter(p => !whitelist.has(p));
+            if (unauthorized.length > 0) {
+                return res.status(403).json({ 
+                    error: "Hard Restriction Violation", 
+                    details: `The following permissions are not authorized by the selected MFEs: ${unauthorized.join(", ")}` 
+                });
+            }
+        } else if (permissions && permissions.length > 0) {
+            return res.status(403).json({ error: "Hard Restriction Violation", details: "Permissions cannot be assigned without at least one associated MFE." });
         }
 
         const response = await Role.findByIdAndUpdate(roleId,{

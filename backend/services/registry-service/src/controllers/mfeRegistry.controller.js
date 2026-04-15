@@ -5,7 +5,7 @@ const MfeRegistry = require("../models/mfeRegistry.model");
  */
 const createMfe = async (req, res) => {
   try {
-    let { feature, name, description, route,comps,remoteUrl, module, isActive } = req.body;
+    let { feature, name, description, route, comps, remoteUrl, module, isActive, allowedPermissions } = req.body;
     
     // Validate that all required fields are present
     if (!feature || !name || !route || !remoteUrl || !module) {
@@ -21,7 +21,8 @@ const createMfe = async (req, res) => {
       name: name.trim(),
       description: description?.trim(),
       route: route.trim(),
-      components: comps,
+      components: comps || [],
+      allowedPermissions: allowedPermissions || [],
       remoteUrl: remoteUrl.trim(),
       module: module.trim(),
       isActive: isActive ?? true,
