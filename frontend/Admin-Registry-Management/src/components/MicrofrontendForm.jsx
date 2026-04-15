@@ -3,7 +3,7 @@ import { styles } from "../styles/registryTheme";
 import { registerService, fetchMicroservices } from "../services/registryApi";
 import { LoadingOverlay, SuccessModal, FailureModal } from "./FeedbackModals";
 
-const emptyComponent = { name: "", route: "", description: "", isActive: true, allowedPermissions: [] };
+const emptyComponent = { name: "", route: "", description: "", isActive: true, allowedPermissions: [], isExpanded: true };
 
 const MicrofrontendForm = () => {
   const initialState = {
@@ -359,14 +359,31 @@ const MicrofrontendForm = () => {
             {components.map((comp, index) => (
               <div key={index} style={formStyles.compCard}>
                 {/* Card header */}
-                <div style={formStyles.compCardHeader}>
+                <div
+                  style={{ ...formStyles.compCardHeader, cursor: "pointer" }}
+                  onClick={() => {
+                    setComponents((prev) =>
+                      prev.map((c, i) =>
+                        i === index ? { ...c, isExpanded: c.isExpanded === false ? true : false } : c
+                      )
+                    );
+                  }}
+                >
                   <div style={formStyles.compIndex}>
                     <span style={formStyles.compIndexNum}>{index + 1}</span>
                   </div>
-                  <span style={formStyles.compCardTitle}>Component {index + 1}</span>
+                  <span style={formStyles.compCardTitle}>
+                    Component {index + 1} {comp.name ? `- ${comp.name}` : ""}
+                  </span>
+                  <span style={{ fontSize: "11px", color: "#94a3b8", marginLeft: "4px" }}>
+                    {comp.isExpanded === false ? "▼" : "▲"}
+                  </span>
                   <div style={{ flex: 1 }} />
                   {/* Active pill toggle */}
-                  <label style={formStyles.miniToggleRow}>
+                  <label
+                    style={formStyles.miniToggleRow}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div
                       style={{
                         ...formStyles.miniTrack,
@@ -396,7 +413,10 @@ const MicrofrontendForm = () => {
                   {/* Remove */}
                   <button
                     type="button"
-                    onClick={() => removeComponent(index)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeComponent(index);
+                    }}
                     style={formStyles.removeBtn}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "#fef2f2";
@@ -414,7 +434,8 @@ const MicrofrontendForm = () => {
                 </div>
 
                 {/* Fields */}
-                <div style={formStyles.compFields}>
+                {comp.isExpanded !== false && (
+                  <div style={formStyles.compFields}>
                   <div style={formStyles.fieldGroup}>
                     <label style={formStyles.fieldLabel}>Component Name</label>
                     <input
@@ -518,6 +539,7 @@ const MicrofrontendForm = () => {
                     )}
                   </div>
                 </div>
+                )}
               </div>
             ))}
           </div>
