@@ -5,7 +5,7 @@ const serverUrl = import.meta.env.VITE_SERVER_URL
 function Roles() {
     const [roles, setRoles] = useState([]);
     const [error, setError] = useState(null);
-    const [name,setName] = useState("");
+    const [name, setName] = useState("");
     const [editingRole, setEditingRole] = useState(null);
     const [microfrontends, setMicrofrontends] = useState([]);
     const [microservices, setMicroservices] = useState([]);
@@ -14,7 +14,6 @@ function Roles() {
     const [editExpiresAt, setEditExpiresAt] = useState("");
     const [editSelectedPermissions, setEditSelectedPermissions] = useState(new Set());
     const [editSelectedMfes, setEditSelectedMfes] = useState(new Set());
-    const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set());
     const getRoles = async () => {
         try {
             const response = await axios.get("http://localhost:3002/roles");
@@ -32,7 +31,7 @@ function Roles() {
         setEditSelectedPermissions(new Set(role.permissions || []));
         setEditSelectedMfes(new Set(role.mfeAccess || []));
     };
-    
+
     useEffect(() => {
         getRoles();
     }, []);
@@ -40,21 +39,21 @@ function Roles() {
         const fetchRegistries = async () => {
             try {
                 const [mfeRes, svcRes] = await Promise.all([
-                    axios.get(`${import.meta.env.VITE_REGISTRY_URL}/registry/mfes`),
-                    axios.get(`${import.meta.env.VITE_REGISTRY_URL}/registry/services`)
+                    axios.get("http://localhost:3001/registry/mfes"),
+                    axios.get("http://localhost:3001/registry/services")
                 ]);
-                
+
                 const mfes = mfeRes.data.map(m => ({
                     id: m.feature,
                     label: m.name,
-                    allowedPermissions: m.allowedPermissions || [],
                     components: (m.components || []).map(c => ({
                         name: c.name,
                         route: c.route,
                         componentKey: `${m.feature}::${c.route}`
                     }))
+
                 }));
-                
+
                 const groupedServices = {};
                 svcRes.data.forEach(api => {
                     if (!groupedServices[api.service]) {
@@ -77,85 +76,36 @@ function Roles() {
                 setError("Failed to load services. Please try again.");
             }
         };
-        
+
         fetchRegistries();
     }, []);
 
     const closeEditModal = () => {
         setEditingRole(null);
     };
-    
-    // Whitelist management for edit mode
-    useEffect(() => {
-        const activeFeatures = new Set();
-        editSelectedMfes.forEach(key => activeFeatures.add(key.split("::")[0]));
-        
-        const newWhitelist = new Set();
-        activeFeatures.forEach(fid => {
-            const mfe = microfrontends.find(m => m.id === fid);
-            if (mfe) mfe.allowedPermissions.forEach(p => newWhitelist.add(p));
-        });
 
-        setAllowedPermissionsWhitelist(newWhitelist);
-
-        // Hard Restriction: Remove any selected permissions that are no longer in the whitelist
-        setEditSelectedPermissions(prev => {
-            const next = new Set();
-            prev.forEach(p => {
-                if (newWhitelist.has(p)) next.add(p);
-            });
-            return next;
-        });
-    }, [editSelectedMfes, microfrontends]);
-
-    const toggleMfe = (mfeId, components) => {
+    const toggleMfe = (components) => {
         const hasAny = components.some(c => editSelectedMfes.has(c.componentKey));
-        const mfe = microfrontends.find(m => m.id === mfeId);
-
         setEditSelectedMfes(prev => {
             const next = new Set(prev);
             if (hasAny) {
                 components.forEach(c => next.delete(c.componentKey));
             } else {
                 components.forEach(c => next.add(c.componentKey));
-                // Default Assignment: Add all related permissions when MFE is selected
-                if (mfe) {
-                    setEditSelectedPermissions(pPrev => {
-                        const pNext = new Set(pPrev);
-                        mfe.allowedPermissions.forEach(p => pNext.add(p));
-                        return pNext;
-                    });
-                }
             }
             return next;
         });
     };
 
     const toggleComponent = (componentKey) => {
-        const mfeId = componentKey.split("::")[0];
-        const mfe = microfrontends.find(m => m.id === mfeId);
-
         setEditSelectedMfes(prev => {
             const next = new Set(prev);
-            const isAdding = !next.has(componentKey);
             if (next.has(componentKey)) next.delete(componentKey);
             else next.add(componentKey);
-
-            // If adding the VERY FIRST component of this MFE, auto-select its permissions
-            if (isAdding) {
-                const alreadySelectedAny = Array.from(prev).some(k => k.startsWith(mfeId + "::"));
-                if (!alreadySelectedAny && mfe) {
-                    setEditSelectedPermissions(pPrev => {
-                        const pNext = new Set(pPrev);
-                        mfe.allowedPermissions.forEach(p => pNext.add(p));
-                        return pNext;
-                    });
-                }
-            }
             return next;
         });
     };
-    
+
     const toggleService = (permissions) => {
         const hasAny = permissions.some(p => editSelectedPermissions.has(p.permissionKey));
         setEditSelectedPermissions(prev => {
@@ -177,21 +127,21 @@ function Roles() {
             return next;
         });
     };
-    
-    const handleDelete = async(roleId) =>{
-        try{
-            const response = await axios.delete(`${serverUrl}/roles`,{
-                data:{roleId:roleId}
+
+    const handleDelete = async (roleId) => {
+        try {
+            const response = await axios.delete("http://localhost:3002/roles", {
+                data: { roleId: roleId }
             });
             getRoles()
-        }catch(err){
+        } catch (err) {
             setError("Cannot delete Role")
         }
     }
-    
+
     const handleSubmit = async () => {
         try {
-            await axios.put(`${serverUrl}/roles`, {
+            await axios.put(`http://localhost:3002/roles`, {
                 roleId: editingRole._id,
                 name: name,
                 description: editDescription,
@@ -206,9 +156,9 @@ function Roles() {
             setError("Cannot update Role");
         }
     };
-    
+
     const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString();
-    
+
     return (
         <div style={{ minHeight: "120vh", background: "#f0f2f9" }}>
             <Navbar />
@@ -218,31 +168,31 @@ function Roles() {
                     <h1 className="roles-title">All Roles</h1>
                     <button className="refresh-btn" onClick={getRoles}>↻ Refresh</button>
                 </div>
-                
+
                 {error && <div className="status-msg error">{error}</div>}
                 {!error && roles.length === 0 && (
                     <div className="status-msg">No roles found.</div>
                 )}
-                
+
                 <div className="roles-grid">
                     {roles.map((role) => (
                         <div key={role._id} className="role-card">
                             <div className="role-card-header">
-                                <span className="role-name">{role.name}</span> 
-                                {role.isTemp && <span className="badge badge-temp">Temporary</span>} 
+                                <span className="role-name">{role.name}</span>
+                                {role.isTemp && <span className="badge badge-temp">Temporary</span>}
                                 <button className="edit-button" onClick={() => openEditModal(role)}>Edit</button>
                                 <button className="del-button" onClick={() => handleDelete(role._id)}>✕</button>
                             </div>
                             {role.description && (
                                 <div className="role-description">{role.description}</div>
                             )}
-                            
+
                             {role.isTemp && role.expiresAt && (
                                 <div className="role-dates">
-                                    <span> Expires: {formatDate(role.expiresAt)}</span> 
+                                    <span> Expires: {formatDate(role.expiresAt)}</span>
                                 </div>
                             )}
-                            
+
                             <div className="role-section">
                                 <div className="section-label">API Permissions</div>
                                 <div className="tag-list">
@@ -255,13 +205,13 @@ function Roles() {
                                     )}
                                 </div>
                             </div>
-                            
+
                             <div className="role-section">
                                 <div className="section-label">MFE Access</div>
                                 <div className="tag-list">
                                     {role.mfeAccess && role.mfeAccess.length > 0 ? (
                                         role.mfeAccess.map((mfe) => (
-                                            <span key={mfe} className="tag tag-purple">{mfe}</span> 
+                                            <span key={mfe} className="tag tag-purple">{mfe}</span>
                                         ))
                                     ) : (
                                         <span className="empty-tag">No MFE access assigned</span>
@@ -280,12 +230,12 @@ function Roles() {
                             <h2>Edit Role</h2>
                             <button className="modal-close" onClick={closeEditModal}>✕</button>
                         </div>
-                        
+
                         <div className="form-group">
                             <label>Role Name</label>
                             {name}
                         </div>
-                        
+
                         <div className="form-group">
                             <label>Description</label>
                             <input
@@ -296,9 +246,9 @@ function Roles() {
                         </div>
 
                         <div className="form-divider" />
-                        
+
                         <p className="section-title">Microfrontend Access</p>
-                        { microfrontends.length === 0 ? (
+                        {microfrontends.length === 0 ? (
                             <p className="status-text">No microfrontends registered.</p>
                         ) : (
                             <div className="service-list">
@@ -306,7 +256,7 @@ function Roles() {
                                     const hasAny = item.components.some(c => editSelectedMfes.has(c.componentKey));
                                     return (
                                         <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                            <div className="service-header" onClick={() => toggleMfe(item.id, item.components)}>
+                                            <div className="service-header" onClick={() => toggleMfe(item.components)}>
                                                 <input type="checkbox" checked={hasAny} readOnly />
                                                 <span className="service-name">{item.label}</span>
                                             </div>
@@ -341,24 +291,17 @@ function Roles() {
                         )}
 
                         <div className="form-divider" />
-                        
-                        <p className="section-title">Microservice Access (Filtered by MFE selection)</p>
-                        { microfrontends.length > 0 && editSelectedMfes.size === 0 ? (
-                            <p className="status-text warning">Select a Microfrontend first to enable related API permissions.</p>
-                        ) : microservices.length === 0 ? (
+
+                        <p className="section-title">Microservice Access</p>
+                        {microservices.length === 0 ? (
                             <p className="status-text">No microservices registered.</p>
                         ) : (
                             <div className="service-list">
                                 {microservices.map((item) => {
-                                    // Filter to whitelist
-                                    const filteredPermissions = item.permissions.filter(p => allowedPermissionsWhitelist.has(p.permissionKey));
-                                    
-                                    if (filteredPermissions.length === 0) return null;
-
-                                    const hasAny = filteredPermissions.some(p => editSelectedPermissions.has(p.permissionKey));
+                                    const hasAny = item.permissions.some(p => editSelectedPermissions.has(p.permissionKey));
                                     return (
                                         <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                            <div className="service-header" onClick={() => toggleService(filteredPermissions)}>
+                                            <div className="service-header" onClick={() => toggleService(item.permissions)}>
                                                 <input type="checkbox" checked={hasAny} readOnly />
                                                 <span className="service-name">{item.label}</span>
                                             </div>
@@ -366,7 +309,7 @@ function Roles() {
                                                 <div className="actions-list">
                                                     <p className="actions-title">Resource List:</p>
                                                     <div className="actions-grid">
-                                                        {filteredPermissions.map((perm) => {
+                                                        {item.permissions.map((perm) => {
                                                             const isSelected = editSelectedPermissions.has(perm.permissionKey);
                                                             return (
                                                                 <div
@@ -393,7 +336,7 @@ function Roles() {
                         )}
 
                         <div className="form-divider" />
-                        
+
                         <div
                             className={`permission-item ${editIsTemp ? "checked" : ""}`}
                             onClick={() => setEditIsTemp(!editIsTemp)}
@@ -413,7 +356,7 @@ function Roles() {
                                 />
                             </div>
                         )}
-                        
+
                         <div className="modal-footer">
                             <button className="cancel-btn" onClick={closeEditModal}>Cancel</button>
                             <button
@@ -434,110 +377,6 @@ export default Roles;
 
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-.form-divider {
-    height: 1px;
-    background: #e4e7f0;
-    margin: 4px 0;
-}
-
-.section-title {
-    font-size: 13px;
-    font-weight: 700;
-    color: #0d0a41;
-    margin: 0 0 8px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.status-text {
-    font-size: 13px;
-    color: #9ca3af;
-    margin: 0;
-}
-
-.service-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.service-card {
-    border: 1px solid #e4e7f0;
-    border-radius: 8px;
-    padding: 10px 12px;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-}
-
-.service-card.checked {
-    border-color: #4f46e5;
-    background: #f5f3ff;
-}
-
-.service-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.service-name {
-    font-size: 14px;
-    font-weight: 600;
-    color: #374151;
-}
-
-.actions-list {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #e4e7f0;
-}
-
-.actions-title {
-    font-size: 11px;
-    font-weight: 600;
-    color: #9ca3af;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 0 0 8px 0;
-}
-
-.actions-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.action-chip {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #e4e7f0;
-    background: #fff;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    font-size: 13px;
-}
-
-.action-chip.selected {
-    background: #eef2ff;
-    border-color: #4f46e5;
-}
-
-.action-chip:hover {
-    background: #f5f3ff;
-}
-
-.action-name {
-    font-weight: 600;
-    color: #374151;
-}
-
-.action-desc {
-    color: #6b7280;
-    font-size: 12px;
-}
 .roles-container {
 padding: 32px;
 font-family: 'DM Sans', sans-serif;
@@ -610,13 +449,13 @@ margin: 0 auto;
 
 .modal-close:hover { color: #d01d1d; }
 
-.form-group {
+.modal .form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.form-group label {
+.modal .form-group label {
     font-size: 12px;
     font-weight: 600;
     color: #6b7280;
@@ -624,7 +463,7 @@ margin: 0 auto;
     letter-spacing: 0.5px;
 }
 
-.form-group input {
+.modal .form-group input {
     padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid #e4e7f0;
@@ -633,9 +472,9 @@ margin: 0 auto;
     outline: none;
 }
 
-.form-group input:focus { border-color: #4f46e5; }
+.modal .form-group input:focus { border-color: #4f46e5; }
 
-.permission-item {
+.modal .permission-item {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -645,7 +484,7 @@ margin: 0 auto;
     cursor: pointer;
 }
 
-.permission-item.checked {
+.modal .permission-item.checked {
     background: #eef2ff;
     border-color: #4f46e5;
 }

@@ -43,7 +43,25 @@ db.apiregistries.insertMany([
   { service: "report-service", basePath: "/api/v1/reports", route: "/:id", method: "GET", resource: "report", action: "read", permissionKey: "report-service:report:read", isActive: false },
   { service: "report-service", basePath: "/api/v1/reports", route: "/generate", method: "POST", resource: "report", action: "generate", permissionKey: "report-service:report:generate", isActive: false },
   { service: "report-service", basePath: "/api/v1/reports", route: "/:id/export", method: "GET", resource: "report", action: "export", permissionKey: "report-service:report:export", isActive: false },
-  { service: "report-service", basePath: "/api/v1/reports", route: "/schedule", method: "POST", resource: "report", action: "schedule", permissionKey: "report-service:report:schedule", isActive: false }
+  { service: "report-service", basePath: "/api/v1/reports", route: "/schedule", method: "POST", resource: "report", action: "schedule", permissionKey: "report-service:report:schedule", isActive: false },
+
+  // Gradelist Service
+  { service: "gradelist-service", basePath: "/api/v1/gradelist", route: "/", method: "GET", resource: "gradelist", action: "read", permissionKey: "gradelist-service:gradelist:read", isActive: true },
+  { service: "gradelist-service", basePath: "/api/v1/gradelist", route: "/", method: "POST", resource: "gradelist", action: "create", permissionKey: "gradelist-service:gradelist:create", isActive: true },
+  { service: "gradelist-service", basePath: "/api/v1/gradelist", route: "/:id", method: "PUT", resource: "gradelist", action: "update", permissionKey: "gradelist-service:gradelist:update", isActive: true },
+  { service: "gradelist-service", basePath: "/api/v1/gradelist", route: "/:id", method: "DELETE", resource: "gradelist", action: "delete", permissionKey: "gradelist-service:gradelist:delete", isActive: true },
+
+  // Fee Service
+  { service: "fee-service", basePath: "/api/v1/fees", route: "/", method: "GET", resource: "fee-status", action: "read", permissionKey: "fee-service:fee-status:read", isActive: true },
+  { service: "fee-service", basePath: "/api/v1/fees", route: "/", method: "POST", resource: "fee-status", action: "create", permissionKey: "fee-service:fee-status:create", isActive: true },
+  { service: "fee-service", basePath: "/api/v1/fees", route: "/:id", method: "PUT", resource: "fee-status", action: "update", permissionKey: "fee-service:fee-status:update", isActive: true },
+  { service: "fee-service", basePath: "/api/v1/fees", route: "/:id", method: "DELETE", resource: "fee-status", action: "delete", permissionKey: "fee-service:fee-status:delete", isActive: true },
+
+  // Room Service
+  { service: "room-service", basePath: "/api/v1/rooms", route: "/", method: "GET", resource: "room-booking", action: "read", permissionKey: "room-service:room-booking:read", isActive: true },
+  { service: "room-service", basePath: "/api/v1/rooms", route: "/", method: "POST", resource: "room-booking", action: "create", permissionKey: "room-service:room-booking:create", isActive: true },
+  { service: "room-service", basePath: "/api/v1/rooms", route: "/:id", method: "PUT", resource: "room-booking", action: "update", permissionKey: "room-service:room-booking:update", isActive: true },
+  { service: "room-service", basePath: "/api/v1/rooms", route: "/:id", method: "DELETE", resource: "room-booking", action: "delete", permissionKey: "room-service:room-booking:delete", isActive: true }
 ]);
 print("✓ Inserted API Registry documents");
 
@@ -131,6 +149,30 @@ db.mferegistries.insertMany([
     remoteUrl: "http://localhost:5002/assets/remoteEntry.js",
     module: "./AnalyticsApp",
     description: "Business intelligence and analytics microfrontend."
+  },
+  {
+    name: "Gradelist Manager",
+    feature: "gradelist-mfe",
+    route: "/gradelist",
+    remoteUrl: "http://localhost:5173/assets/remoteEntry.js",
+    module: "./GradelistApp",
+    description: "Manage student grade records (course-rollnumber-grade tuples)."
+  },
+  {
+    name: "Fee Payment Status",
+    feature: "fee-status-mfe",
+    route: "/fee-status",
+    remoteUrl: "http://localhost:5173/assets/remoteEntry.js",
+    module: "./FeeStatusApp",
+    description: "View and manage student fee payment records."
+  },
+  {
+    name: "Room Booking System",
+    feature: "room-booking-mfe",
+    route: "/room-booking",
+    remoteUrl: "http://localhost:5173/assets/remoteEntry.js",
+    module: "./RoomBookingApp",
+    description: "Book and manage room reservations."
   }
 ]);
 print("✓ Inserted MFE Registry documents");
@@ -252,7 +294,7 @@ db.roles.insertMany([
     ],
     mfeAccess: ["dashboard-mfe", "analytics-mfe"],
     isTemp: true,
-    expiresAt: new Date("2025-08-31T23:59:59Z"), 
+    expiresAt: new Date("2025-08-31T23:59:59Z"),
     createdAt: new Date("2025-05-20T12:00:00Z"),
     updatedAt: new Date("2025-05-20T12:00:00Z")
   },
@@ -266,7 +308,7 @@ db.roles.insertMany([
     ],
     mfeAccess: ["admin-mfe"],
     isTemp: true,
-    expiresAt: new Date("2025-09-30T23:59:59Z"), 
+    expiresAt: new Date("2025-09-30T23:59:59Z"),
     createdAt: new Date("2025-08-25T14:00:00Z"),
     updatedAt: new Date("2025-08-25T14:00:00Z")
   }
