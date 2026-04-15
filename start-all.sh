@@ -25,6 +25,7 @@ BACKEND_SERVICES=(
   "registry-service| backend/services/registry-service"
   "role-service    | backend/services/role-service"
   "user-service    | backend/services/user-service"
+  
 )
 
 FRONTEND_APPS=(

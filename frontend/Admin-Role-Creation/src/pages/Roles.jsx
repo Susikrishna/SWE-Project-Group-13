@@ -377,6 +377,110 @@ export default Roles;
 
 const styles = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+.form-divider {
+    height: 1px;
+    background: #e4e7f0;
+    margin: 4px 0;
+}
+
+.section-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0d0a41;
+    margin: 0 0 8px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-text {
+    font-size: 13px;
+    color: #9ca3af;
+    margin: 0;
+}
+
+.service-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.service-card {
+    border: 1px solid #e4e7f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.service-card.checked {
+    border-color: #4f46e5;
+    background: #f5f3ff;
+}
+
+.service-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.service-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.actions-list {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #e4e7f0;
+}
+
+.actions-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 8px 0;
+}
+
+.actions-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.action-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #e4e7f0;
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    font-size: 13px;
+}
+
+.action-chip.selected {
+    background: #eef2ff;
+    border-color: #4f46e5;
+}
+
+.action-chip:hover {
+    background: #f5f3ff;
+}
+
+.action-name {
+    font-weight: 600;
+    color: #374151;
+}
+
+.action-desc {
+    color: #6b7280;
+    font-size: 12px;
+}
 .roles-container {
 padding: 32px;
 font-family: 'DM Sans', sans-serif;
@@ -449,13 +553,13 @@ margin: 0 auto;
 
 .modal-close:hover { color: #d01d1d; }
 
-.modal .form-group {
+.form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
 
-.modal .form-group label {
+.form-group label {
     font-size: 12px;
     font-weight: 600;
     color: #6b7280;
@@ -463,7 +567,7 @@ margin: 0 auto;
     letter-spacing: 0.5px;
 }
 
-.modal .form-group input {
+.form-group input {
     padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid #e4e7f0;
@@ -472,9 +576,9 @@ margin: 0 auto;
     outline: none;
 }
 
-.modal .form-group input:focus { border-color: #4f46e5; }
+.form-group input:focus { border-color: #4f46e5; }
 
-.modal .permission-item {
+.permission-item {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -484,7 +588,7 @@ margin: 0 auto;
     cursor: pointer;
 }
 
-.modal .permission-item.checked {
+.permission-item.checked {
     background: #eef2ff;
     border-color: #4f46e5;
 }
