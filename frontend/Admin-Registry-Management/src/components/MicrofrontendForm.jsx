@@ -13,6 +13,7 @@ const MicrofrontendForm = () => {
     remoteUrl: "",
     module: "",
     isActive: true,
+    allowedPermissions: [],
   };
   const [formData, setFormData] = useState(initialState);
   const [components, setComponents] = useState([]);
@@ -89,6 +90,28 @@ const MicrofrontendForm = () => {
     });
   };
 
+  const toggleRootServiceExpand = (serviceName, apis) => {
+    setFormData((prev) => {
+      let nextPerms = new Set(prev.allowedPermissions || []);
+      const hasAny = apis.some((a) => (prev.allowedPermissions || []).includes(a.permissionKey));
+      if (hasAny) {
+        apis.forEach((a) => nextPerms.delete(a.permissionKey));
+      } else {
+        apis.forEach((a) => nextPerms.add(a.permissionKey));
+      }
+      return { ...prev, allowedPermissions: Array.from(nextPerms) };
+    });
+  };
+
+  const toggleRootPermission = (permKey) => {
+    setFormData((prev) => {
+      let nextPerms = new Set(prev.allowedPermissions || []);
+      if (nextPerms.has(permKey)) nextPerms.delete(permKey);
+      else nextPerms.add(permKey);
+      return { ...prev, allowedPermissions: Array.from(nextPerms) };
+    });
+  };
+
   const handleInputChange = (e) => {
     const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
     setFormData({ ...formData, [e.target.name]: value });
@@ -122,7 +145,7 @@ const MicrofrontendForm = () => {
       module: formData.module,
       isActive: formData.isActive,
       comps: components,
-      allowedPermissions: [],
+      allowedPermissions: formData.allowedPermissions || [],
     };
     try {
       const data = await registerService(payload, "microfrontend");
@@ -220,7 +243,76 @@ const MicrofrontendForm = () => {
           </span>
         </label>
 
-        {/* ── Required APIs & Permissions has moved to Component level ── */}
+        {/* ── Root Level APIs ── */}
+        <div style={{ ...formStyles.section, marginBottom: "24px" }}>
+          <p style={{...formStyles.sectionTitle, fontSize: "13px"}}>Root MFE Permissions</p>
+          <p style={{...formStyles.sectionSub, marginBottom: "16px"}}>
+            Select backend APIs required globally by this microfrontend.
+          </p>
+          
+          <div style={{ marginBottom: "16px" }}>
+            <input
+              type="text"
+              placeholder="Search services (e.g. user-svc)..."
+              value={apiSearchQuery}
+              onChange={(e) => setApiSearchQuery(e.target.value)}
+              style={{...formStyles.fieldInput, padding: "8px 12px", fontSize: "12px"}}
+            />
+          </div>
+
+          {loadingApis ? (
+            <p style={{ fontSize: "12px", color: "#64748b" }}>Loading services...</p>
+          ) : displayedServices.length === 0 ? (
+            <p style={{ fontSize: "12px", color: "#64748b" }}>
+              {apiSearchQuery.trim() ? "No services match your search." : "No services available."}
+            </p>
+          ) : (
+            <div className="service-list">
+              {displayedServices.map((serviceName) => {
+                const apis = groupedApis[serviceName];
+                const hasAny = apis.some(api => (formData.allowedPermissions || []).includes(api.permissionKey));
+                
+                return (
+                  <div key={serviceName} className={`service-card ${hasAny ? "checked" : ""}`}>
+                    <div
+                      className="service-header"
+                      onClick={() => toggleRootServiceExpand(serviceName, apis)}
+                      style={{ padding: "10px 12px" }}
+                    >
+                      <input type="checkbox" checked={hasAny} readOnly />
+                      <span className="service-name" style={{ fontSize: "13px" }}>{serviceName.toUpperCase()}</span>
+                    </div>
+                    
+                    {hasAny && (
+                      <div className="actions-list" style={{ padding: "10px 12px" }}>
+                        <div className="actions-grid">
+                          {apis.map((api) => {
+                            const isSelected = (formData.allowedPermissions || []).includes(api.permissionKey);
+                            return (
+                              <div
+                                key={api.permissionKey}
+                                className={`action-chip ${isSelected ? "selected" : ""}`}
+                                style={{ padding: "6px 8px", fontSize: "12px" }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleRootPermission(api.permissionKey);
+                                }}
+                              >
+                                <input type="checkbox" checked={isSelected} readOnly />
+                                <span className="action-name">{api.resource} :&nbsp;</span>
+                                <span className="action-desc">{api.action}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* ── Components Section ── */}
         <div style={formStyles.section}>

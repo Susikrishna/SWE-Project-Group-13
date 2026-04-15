@@ -267,25 +267,52 @@ function RoleForm() {
                                             <input type="checkbox" checked={hasAny} readOnly />
                                             <span className="service-name">{item.label}</span>
                                         </div>
+                                        {hasAny && item.allowedPermissions?.length > 0 && (
+                                            <div className="actions-list root-permissions-block">
+                                                <div className="section-badge-header">
+                                                    <span className="badge-icon">⚡</span>
+                                                    <p className="actions-title-premium">Root Permissions (Always granted)</p>
+                                                </div>
+                                                <div className="api-badges">
+                                                    {item.allowedPermissions.map((p) => (
+                                                        <span key={p} className="api-badge root-badge">{p}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                         {hasAny && item.components.length > 0 && (
-                                            <div className="actions-list">
-                                                <p className="actions-title">Components:</p>
+                                            <div className={`actions-list ${item.allowedPermissions?.length > 0 ? "components-block-continued" : "components-block"}`}>
+                                                <p className="actions-title-premium" style={{ marginBottom: "12px" }}>Components</p>
                                                 <div className="actions-grid">
                                                     {item.components.map((comp) => {
                                                         const isSelected = selectedMfes.has(comp.componentKey);
                                                         return (
-                                                            <div
+                                                            <label
                                                                 key={comp.componentKey}
                                                                 className={`action-chip ${isSelected ? "selected" : ""}`}
                                                                 onClick={(e) => {
-                                                                    e.stopPropagation();
+                                                                    e.preventDefault();
                                                                     toggleComponent(comp.componentKey);
                                                                 }}
                                                             >
-                                                                <input type="checkbox" checked={isSelected} readOnly />
-                                                                <span className="action-name">{comp.name} :&nbsp;</span>
-                                                                <span className="action-desc">{comp.route}</span>
-                                                            </div>
+                                                                <div className="chip-header">
+                                                                    <input type="checkbox" checked={isSelected} readOnly />
+                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                        <span className="action-name">{comp.name}</span>
+                                                                        <span className="action-desc">{comp.route}</span>
+                                                                    </div>
+                                                                </div>
+                                                                {comp.allowedPermissions?.length > 0 && (
+                                                                    <div className="api-badge-container">
+                                                                        <span className="api-badge-label">Required APIs</span>
+                                                                        <div className="api-badges">
+                                                                            {comp.allowedPermissions.map(p => (
+                                                                                <span key={p} className="api-badge">{p}</span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </label>
                                                         );
                                                     })}
                                                 </div>
@@ -298,13 +325,14 @@ function RoleForm() {
                     )}
 
                     <div className="form-divider" />
-                    <p className="section-title">Microservice Access (Filtered by MFE selection)</p>
+                    <p className="section-title">Microservice Access</p>
+                    <p className="section-subtitle">Filtered to only show backend APIs required by your Microfrontend choices above.</p>
                     {loading ? (
-                        <p className="status-text">Loading services...</p>
+                        <p className="status-text loading-pulse">Loading services...</p>
                     ) : error ? (
                         <p className="status-text error">{error}</p>
                     ) : selectedMfes.size === 0 ? (
-                        <p className="status-text warning">Select a Microfrontend first to enable related API permissions.</p>
+                        <p className="status-text warning">Select a Microfrontend above to enable related APIs.</p>
                     ) : (
                         <div className="service-list">
                             {microservices.map((item) => {
@@ -324,24 +352,28 @@ function RoleForm() {
                                             <span className="service-name">{item.label}</span>
                                         </div>
                                         {hasAny && (
-                                            <div className="actions-list">
-                                                <p className="actions-title">Resource List:</p>
+                                            <div className="actions-list components-block">
+                                                <p className="actions-title-premium" style={{ marginBottom: "12px" }}>Resource List</p>
                                                 <div className="actions-grid">
                                                     {filteredPermissions.map((perm) => {
                                                         const isSelected = selectedPermissions.has(perm.permissionKey);
                                                         return (
-                                                            <div
+                                                            <label
                                                                 key={perm.permissionKey}
-                                                                className={`action-chip ${isSelected ? "selected" : ""}`}
+                                                                className={`action-chip microservice-chip ${isSelected ? "selected" : ""}`}
                                                                 onClick={(e) => {
-                                                                    e.stopPropagation();
+                                                                    e.preventDefault();
                                                                     togglePermission(perm.permissionKey);
                                                                 }}
                                                             >
-                                                                <input type="checkbox" checked={isSelected} readOnly />
-                                                                <span className="action-name">{perm.resource} :&nbsp;</span>
-                                                                <span className="action-desc">{perm.action}</span>
-                                                            </div>
+                                                                <div className="chip-header">
+                                                                    <input type="checkbox" checked={isSelected} readOnly />
+                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                                        <span className="action-name">{perm.resource}</span>
+                                                                        <span className="action-desc">{perm.action}</span>
+                                                                    </div>
+                                                                </div>
+                                                            </label>
                                                         );
                                                     })}
                                                 </div>
@@ -355,14 +387,13 @@ function RoleForm() {
 
                     <div className="form-divider" />
 
-                    <div
-                        onClick={() => setIsTemp(!isTemp)}
+                    <label
                         className={`permission-item ${isTemp ? "checked" : ""}`}
                         style={{ marginBottom: "10px" }}
                     >
-                        <input type="checkbox" checked={isTemp} readOnly />
-                        <label>Is the Role Temporary?</label>
-                    </div>
+                        <input type="checkbox" checked={isTemp} onChange={() => setIsTemp(!isTemp)} />
+                        <span>Is the Role Temporary?</span>
+                    </label>
 
                     {isTemp && (
                         <div className="date-range">
@@ -378,13 +409,15 @@ function RoleForm() {
                         </div>
                     )}
 
-                    <button
-                        className="submit-btn"
-                        type="submit"
-                        disabled={!roleName.trim() || loading}
-                    >
-                        Create Role
-                    </button>
+                    <div style={{ marginTop: "32px" }}>
+                        <button
+                            className="submit-btn"
+                            type="submit"
+                            disabled={!roleName.trim() || loading}
+                        >
+                            Create Role
+                        </button>
+                    </div>
 
                 </form>
             </div>
@@ -395,39 +428,44 @@ function RoleForm() {
 export default RoleForm;
 
 const styles = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 .role-container {
     display: flex;
     justify-content: center;
-    align-items: center;
-    font-family: 'DM Sans', sans-serif;
-    padding: 20px;
+    align-items: flex-start;
+    font-family: 'Inter', sans-serif;
+    padding: 40px 20px;
+    background: #f4f6fb;
+    min-height: 100vh;
 }
 
 .role-form {
     background: #ffffff;
-    border: 1px solid #e4e7f0;
-    padding: 40px;
-    border-radius: 16px;
-    width: 60%;
-    box-shadow: 0 8px 32px rgba(79,70,229,0.08), 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    padding: 48px;
+    border-radius: 24px;
+    width: 65%;
+    max-width: 900px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .form-header {
-    margin-bottom: 32px;
+    margin-bottom: 40px;
 }
 
 .form-header h2 {
-    font-size: 22px;
-    font-weight: 700;
-    color: #111827;
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.5px;
+    margin: 0;
 }
 
 .form-divider {
     height: 1px;
-    background: #e9ebf2;
-    margin: 28px 0;
+    background: linear-gradient(to right, transparent, rgba(226, 232, 240, 0.8), transparent);
+    margin: 36px 0;
 }
 
 .form-group {
@@ -436,218 +474,386 @@ const styles = `
 
 .form-group label {
     display: block;
-    margin-bottom: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 1px;
 }
 
 .form-group input[type="text"],
 .form-group input[type="date"] {
     width: 100%;
-    padding: 11px 14px;
-    border-radius: 8px;
-    border: 1px solid #d1d5db;
-    background: #f9fafb;
-    color: #111827;
-    font-family: 'DM Mono', monospace;
-    font-size: 14px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.25s ease;
     box-sizing: border-box;
     outline: none;
 }
 
 .form-group input:focus {
-    border-color: #070441;
-    box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+    border-color: #090649;
+    box-shadow: 0 0 0 4px rgba(9, 6, 73, 0.1);
     background: #ffffff;
 }
 
 .section-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0f172a;
     text-transform: uppercase;
-    margin-bottom: 14px;
+    letter-spacing: 1.2px;
+    margin-bottom: 6px;
+}
+
+.section-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 24px;
+    margin-top: 0;
 }
 
 .service-list {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
 }
 
 .service-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    background: #fafafa;
-    transition: border 0.2s, background 0.2s;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #ffffff;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    overflow: hidden;
+}
+
+.service-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .service-card.checked {
     border-color: #090649;
-    background: #f4f6ff;
+    background: #fafbff;
+    box-shadow: 0 4px 16px rgba(9, 6, 73, 0.06);
 }
 
 .service-header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
+    gap: 14px;
+    padding: 18px 20px;
     cursor: pointer;
+    background: #f8fafc;
+    transition: background 0.2s;
+}
+
+.service-card.checked .service-header {
+    background: #f4f6ff;
 }
 
 .service-header:hover {
-    background: #eef0fd;
+    background: #f1f5f9;
 }
 
-.service-header input {
+.service-card.checked .service-header:hover {
+    background: #eceffc;
+}
+
+.service-header input, .chip-header input, .permission-item input {
     appearance: none;
-    width: 17px;
-    height: 17px;
-    border-radius: 5px;
-    border: 1.5px solid #d1d5db;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #cbd5e1;
     background: white;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
-.service-header input:checked {
+.service-header input:checked, .chip-header input:checked, .permission-item input:checked {
     background: #090649;
-    border-color: #040220;
+    border-color: #090649;
+}
+
+.service-header input:checked::after, .chip-header input:checked::after, .permission-item input:checked::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 6px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
 }
 
 .service-name {
-    font-weight: 600;
-    color: #111827;
-}
-
-.service-id {
-    margin-left: auto;
-    font-size: 12px;
-    color: #6b7280;
-    font-family: 'DM Mono', monospace;
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 15px;
+    letter-spacing: 0.5px;
 }
 
 .actions-list {
-    padding: 14px 16px 18px 16px;
-    border-top: 1px solid #e5e7eb;
+    padding: 0 20px 20px 20px;
+    background: #ffffff;
 }
 
-.actions-title {
+.components-block {
+    padding-top: 20px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.components-block-continued {
+    padding-top: 16px;
+}
+
+.root-permissions-block {
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-top: 1px dashed #e2e8f0;
+    background: #fdfdfe;
+}
+
+.actions-title-premium {
     font-size: 12px;
-    color: #6b7280;
+    color: #090649;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.section-badge-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 10px;
-    font-weight: 600;
+}
+
+.badge-icon {
+    font-size: 14px;
 }
 
 .actions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+    align-items: stretch;
 }
 
 .action-chip {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 10px;
-    border-radius: 7px;
+    flex-direction: column;
+    padding: 14px 16px;
+    border-radius: 12px;
     border: 1px solid #e5e7eb;
     background: #ffffff;
     cursor: pointer;
-    font-size: 13px;
-    font-family: 'DM Mono', monospace;
-    transition: all 0.15s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    height: 100%;
+    box-sizing: border-box;
 }
 
 .action-chip:hover {
-    background: #eef0fd;
-    border-color: #c7d0fb;
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .action-chip.selected {
-    background: #eef2ff;
+    background: #f4f6ff;
     border-color: #090649;
+    box-shadow: inset 0 0 0 1px #090649;
 }
 
-.action-chip input {
-    appearance: none;
-    width: 15px;
-    height: 15px;
-    border-radius: 4px;
-    border: 1.5px solid #d1d5db;
+.action-chip.microservice-chip.selected {
+    background: #f8f9ff;
+    border-color: #0a0868;
+    box-shadow: inset 0 0 0 1px #0a0868;
+}
+.action-chip.microservice-chip.selected .chip-header input:checked {
+    background: #0a0868;
+    border-color: #0a0868;
 }
 
-.action-chip input:checked {
-    background: #090649;
-    border-color: #040220;
+.chip-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
 }
 
 .action-name {
     font-weight: 600;
+    color: #1e293b;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 .action-desc {
-    color: #6b7280;
+    color: #64748b;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 2px;
+}
+
+.api-badge-container {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(226, 232, 240, 0.6);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.api-badge-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.api-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.api-badge {
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    line-height: 1.2;
+}
+
+.root-badge {
+    background: #eef0fc;
+    color: #090649;
+    border-color: #c7d0fb;
+    font-weight: 500;
+}
+
+.action-chip.selected .api-badge {
+    background: #e8ecfc;
+    color: #090649;
+    border-color: #bac4f5;
 }
 
 .status-text {
-    font-size: 13px;
-    color: #6b7280;
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+    padding: 24px;
+    text-align: center;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed #cbd5e1;
 }
 
 .status-text.error {
-    color: #dc2626;
+    color: #ef4444;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+.status-text.warning {
+    color: #f59e0b;
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.loading-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
 }
 
 .permission-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 14px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    background: #f9fafb;
+    gap: 14px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
     cursor: pointer;
+    font-weight: 600;
+    color: #334155;
+    transition: all 0.2s;
+}
+
+.permission-item:hover {
+    background: #f8fafc;
 }
 
 .permission-item.checked {
-    background: #eef2ff;
+    background: #f4f6ff;
     border-color: #090649;
+    color: #090649;
 }
 
 .date-range {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 16px;
     margin-top: 16px;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px dashed #cbd5e1;
 }
 
 .submit-btn {
     width: 100%;
-    padding: 13px;
+    padding: 18px;
     background: #090734;
     color: white;
     border: none;
-    border-radius: 9px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
+    border-radius: 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 6px 16px rgba(9, 7, 52, 0.2);
 }
 
-.submit-btn:hover {
-    opacity: 0.92;
+.submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: #0d0a4c;
+    box-shadow: 0 10px 20px rgba(9, 7, 52, 0.3);
 }
 
-.submit-btn:active {
-    transform: scale(0.99);
+.submit-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 4px 10px rgba(9, 7, 52, 0.2);
 }
 
 .submit-btn:disabled {
-    opacity: 0.4;
+    background: #cbd5e1;
+    box-shadow: none;
     cursor: not-allowed;
+    color: #94a3b8;
 }
 `;
