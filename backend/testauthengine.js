@@ -33,9 +33,29 @@ async function runTests() {
         console.log(authRes.data);
 
 
-        console.log("\n---- Testing /auth/check-access ----");
+        // ---- URL-Based Access Check (NEW) ----
+        console.log("\n---- Testing /auth/check-access (URL-based) ----");
 
-        const accessRes = await axios.post(
+        const urlAccessRes = await axios.post(
+            `${BASE_URL}/auth/check-access`,
+            {
+                url: "/api/v1/users/123",
+                method: "PUT"
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${TOKEN}`
+                }
+            }
+        );
+
+        console.log(urlAccessRes.data);
+
+
+        // ---- Legacy permissionKey-Based Access Check (backward compat) ----
+        console.log("\n---- Testing /auth/check-access (legacy permissionKey) ----");
+
+        const legacyAccessRes = await axios.post(
             `${BASE_URL}/auth/check-access`,
             {
                 permissionKey: "user-service:user:update"
@@ -47,7 +67,7 @@ async function runTests() {
             }
         );
 
-        console.log(accessRes.data);
+        console.log(legacyAccessRes.data);
 
 
         console.log("\n---- Testing protected route ----");
@@ -65,7 +85,7 @@ async function runTests() {
 
     } catch (err) {
         if (err.response) {
-            console.error("\nERROR:", err.response.data);
+            console.error("\nERROR:", err.response.status, err.response.data);
         } else {
             console.error(err.message);
         }

@@ -1,5 +1,6 @@
 const MfeRegistry = require("../models/mfeRegistry.model");
 const { hasPermission } = require("../utils/accessProfile");
+const { resolvePermissionFromUrl } = require("../utils/resolvePermission");
 
 /**
  * GET /auth/authorize
@@ -26,19 +27,50 @@ const authorize = async (req, res) => {
 /**
  * POST /auth/check-access
  * Called by microservices internally to quickly verify a specific action.
+ * 
+ * Accepts EITHER:
+ *   { url: "/api/v1/users/123", method: "PUT" }   — resolves permission from ApiRegistry
+ *   { permissionKey: "user-service:user:update" }  — legacy direct mode (backward compatible)
  */
 const checkAccess = async (req, res) => {
-  const { permissionKey } = req.body || {};
+  const { url, method, permissionKey } = req.body || {};
 
-  if (!permissionKey) {
-    return res.status(400).json({ error: "permissionKey is required" });
+  let resolvedKey = permissionKey;
+
+  // URL-based resolution (primary flow)
+  if (url && method) {
+    const result = await resolvePermissionFromUrl(url, method);
+
+    if (!result.matched) {
+      return res.status(404).json({
+        error: "Route not found in API Registry",
+        detail: `No registered route matches ${method.toUpperCase()} ${url}`,
+      });
+    }
+
+    if (result.isPublic) {
+      return res.status(200).json({
+        userId: req.accessProfile.userId,
+        requiredPermission: null,
+        allowed: true,
+        note: "Route is public — no permission check needed.",
+      });
+    }
+
+    resolvedKey = result.permissionKey;
   }
 
-  const allowed = hasPermission(req.accessProfile, permissionKey);
+  if (!resolvedKey) {
+    return res.status(400).json({
+      error: "Provide either { url, method } or { permissionKey }",
+    });
+  }
+
+  const allowed = hasPermission(req.accessProfile, resolvedKey);
 
   return res.status(200).json({
     userId: req.accessProfile.userId,
-    requiredPermission: permissionKey.toLowerCase(),
+    requiredPermission: resolvedKey.toLowerCase(),
     allowed,
   });
 };
