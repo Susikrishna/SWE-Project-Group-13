@@ -45,7 +45,7 @@ Each service has its own `.env` file. **Never commit `.env` files** — they are
 ```
 backend/services/auz-engine/.env          ← copy from .env.example
 backend/services/registry-service/.env   ← copy from .env.example
-backend/services/role-service/.env       ← copy from .env.example
+backend/services/role-service/.env      ← copy from .env.example 
 backend/services/user-service/.env       ← copy from .env.example
 frontend/Admin-Registry-Management/.env  ← copy from .env.example
 frontend/Admin-Role-Creation/.env        ← copy from .env.example
