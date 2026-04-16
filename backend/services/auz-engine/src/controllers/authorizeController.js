@@ -1,5 +1,6 @@
 const MfeRegistry = require("../models/mfeRegistry.model");
 const { hasPermission } = require("../utils/accessProfile");
+const { resolvePermission } = require("../utils/resolvePermission");
 
 /**
  * GET /auth/authorize
@@ -25,20 +26,53 @@ const authorize = async (req, res) => {
 
 /**
  * POST /auth/check-access
- * Called by microservices internally to quickly verify a specific action.
+ * Called by microservices internally to verify access for a specific URL.
+ *
+ * Request body:
+ *   { url: "/api/v1/users/123", method: "GET" }
+ *
+ * The URL+method is decoded via the ApiRegistry to determine the
+ * required permission string, then checked against the user's profile.
  */
 const checkAccess = async (req, res) => {
-  const { permissionKey } = req.body || {};
+  const { url, method } = req.body || {};
 
-  if (!permissionKey) {
-    return res.status(400).json({ error: "permissionKey is required" });
+  if (!url || !method) {
+    return res.status(400).json({ error: "Both 'url' and 'method' are required" });
+  }
+
+  // Resolve the URL to a permission key using the ApiRegistry
+  const { permissionKey, isPublic, matched } = await resolvePermission(url, method);
+
+  if (!matched) {
+    return res.status(403).json({
+      error: "Access Denied",
+      detail: "Route not found in API Registry. Unrecognized endpoint.",
+      url,
+      method: method.toUpperCase(),
+    });
+  }
+
+  // Public routes are always allowed
+  if (isPublic) {
+    return res.status(200).json({
+      userId: req.accessProfile.userId,
+      url,
+      method: method.toUpperCase(),
+      resolvedPermission: null,
+      isPublic: true,
+      allowed: true,
+    });
   }
 
   const allowed = hasPermission(req.accessProfile, permissionKey);
 
   return res.status(200).json({
     userId: req.accessProfile.userId,
-    requiredPermission: permissionKey.toLowerCase(),
+    url,
+    method: method.toUpperCase(),
+    resolvedPermission: permissionKey,
+    isPublic: false,
     allowed,
   });
 };
