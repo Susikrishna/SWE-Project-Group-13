@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const {getAllLogs,getLogsByUserId} = require("../../controllers/LogController")
+const { getAllLogs, getLogsByUserId, getAnalytics } = require("../../controllers/LogController");
 
-router.get("/",  getAllLogs);
-router.get("/:userId", getLogsByUserId)
+router.get("/analytics", getAnalytics);
+router.get("/", getAllLogs);
+router.get("/:userId", getLogsByUserId);
 
 module.exports = router;
