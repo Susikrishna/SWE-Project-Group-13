@@ -7,6 +7,7 @@
 db.apiregistries.deleteMany({});
 db.mferegistries.deleteMany({});
 db.roles.deleteMany({});
+db.users.deleteMany({});
 
 // ─── 2. Seed API Registry (Microservices) ───────────────────────────────────
 // FULLY CORRECTED: Added basePath, route, and method to satisfy Mongoose schema
@@ -272,5 +273,53 @@ db.roles.insertMany([
   }
 ]);
 print("✓ Inserted 10 Role documents");
+
+// ─── 5. Seed Users ──────────────────────────────────────────────────────────
+// Password is "password" hashed with bcrypt (10 rounds)
+const hashedPassword = "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi";
+
+db.users.insertMany([
+  {
+    name: "Alice Johnson",
+    username: "alice_admin",
+    password: hashedPassword,
+    roles: ["role_super-admin"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "Bob Smith",
+    username: "bob_user",
+    password: hashedPassword,
+    roles: ["role_user"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "Carol White",
+    username: "carol_support",
+    password: hashedPassword,
+    roles: ["role_support-agent"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "David Brown",
+    username: "david_finance",
+    password: hashedPassword,
+    roles: ["role_finance-manager"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "Eva Martinez",
+    username: "eva_analyst",
+    password: hashedPassword,
+    roles: ["role_analyst"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+]);
+print("✓ Inserted 5 User documents");
 
 print("🚀 Seed complete! Database is hydrated with flattened, high-performance schema.");
