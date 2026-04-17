@@ -6,19 +6,28 @@ export default defineConfig({
   plugins: [
     react(),
     federation({
-      name: 'host',
-      remotes: {
-        dashboardRemote: 'http://localhost:5010/assets/remoteEntry.js',
-        adminRemote: 'http://localhost:5011/assets/remoteEntry.js',
-        analyticsRemote: 'http://localhost:5012/assets/remoteEntry.js'
+      name: 'analytics',
+      filename: 'remoteEntry.js',
+      exposes: {
+        './AnalyticsApp': './src/AnalyticsApp.jsx',
       },
       shared: ['react', 'react-dom']
     })
   ],
-  server: { port: 5173 },
   build: {
+    modulePreload: false,
     target: 'esnext',
     minify: false,
     cssCodeSplit: false
+  },
+  server: {
+    port: 5012,
+    cors: true,
+    strictPort: true
+  },
+  preview: {
+    port: 5012,
+    cors: true,
+    strictPort: true
   }
 });

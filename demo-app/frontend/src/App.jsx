@@ -5,9 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './components/LoginPage'
 import Home from './pages/Home'
-import DashboardMfe from './pages/mfe/DashboardMfe'
-import AdminMfe from './pages/mfe/AdminMfe'
-import AnalyticsMfe from './pages/mfe/AnalyticsMfe'
+import GenericMfePage from './components/GenericMfePage'
 import ApiTester from './pages/ApiTester'
 
 function App() {
@@ -19,15 +17,11 @@ function App() {
           <Route path="/home" element={
             <ProtectedRoute><Home /></ProtectedRoute>
           } />
-          <Route path="/dashboard" element={
-            <ProtectedRoute><DashboardMfe /></ProtectedRoute>
-          } />
-          <Route path="/admin" element={
-            <ProtectedRoute><AdminMfe /></ProtectedRoute>
-          } />
-          <Route path="/analytics" element={
-            <ProtectedRoute><AnalyticsMfe /></ProtectedRoute>
-          } />
+          {/* Dynamic route matching MFE modules from the DB config */}
+          <Route path="/dashboard" element={<ProtectedRoute><GenericMfePage /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><GenericMfePage /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><GenericMfePage /></ProtectedRoute>} />
+          
           <Route path="/api-tester" element={
             <ProtectedRoute><ApiTester /></ProtectedRoute>
           } />
@@ -39,3 +33,4 @@ function App() {
 }
 
 export default App
+

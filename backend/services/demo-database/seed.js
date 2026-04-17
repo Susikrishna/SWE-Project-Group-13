@@ -134,7 +134,7 @@ db.mferegistries.insertMany([
       }
     ],
     allowedPermissions: DASHBOARD_ROOT_PERMISSIONS,
-    remoteUrl: "http://localhost:5000/assets/remoteEntry.js",
+    remoteUrl: "http://localhost:5010/assets/remoteEntry.js",
     module: "./DashboardApp",
     description: "User workspace with account summary, billing overview, and notifications."
   },
@@ -160,7 +160,7 @@ db.mferegistries.insertMany([
       }
     ],
     allowedPermissions: ADMIN_ROOT_PERMISSIONS,
-    remoteUrl: "http://localhost:5001/assets/remoteEntry.js",
+    remoteUrl: "http://localhost:5011/assets/remoteEntry.js",
     module: "./AdminApp",
     description: "Internal administration tools for users, sessions, security, and notification configuration."
   },
@@ -193,7 +193,7 @@ db.mferegistries.insertMany([
       }
     ],
     allowedPermissions: ANALYTICS_ROOT_PERMISSIONS,
-    remoteUrl: "http://localhost:5002/assets/remoteEntry.js",
+    remoteUrl: "http://localhost:5012/assets/remoteEntry.js",
     module: "./AnalyticsApp",
     description: "Business intelligence, billing operations, and reporting microfrontend."
   }
