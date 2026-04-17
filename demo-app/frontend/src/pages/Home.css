@@ -1,0 +1,76 @@
+.home-role-info {
+    margin-bottom: var(--space-xl);
+}
+
+.home-role-header {
+    margin-bottom: var(--space-md);
+}
+
+.home-role-label {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.home-role-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+}
+
+.home-role-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: var(--space-md);
+    background: var(--bg-glass);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    flex: 1;
+    min-width: 200px;
+}
+
+.home-role-name {
+    font-size: var(--font-size-base);
+    font-weight: 700;
+    color: var(--accent-primary);
+    text-transform: capitalize;
+}
+
+.home-role-desc {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.home-empty {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--text-secondary);
+}
+
+.home-perm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-md);
+}
+
+.home-perm-group {
+    padding: var(--space-md);
+}
+
+.home-perm-service {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+    text-transform: capitalize;
+}
+
+.home-perm-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}

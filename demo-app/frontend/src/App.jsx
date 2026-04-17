@@ -1,23 +1,40 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
-import { BrowserRouter as Router, Routes, Route, BrowserRouter } from 'react-router-dom'
-import Dashboard from './pages/Dashboard'
-import LoginForm from './components/LoginForm'
+import './index.css'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import LoginPage from './components/LoginPage'
+import Home from './pages/Home'
+import DashboardMfe from './pages/mfe/DashboardMfe'
+import AdminMfe from './pages/mfe/AdminMfe'
+import AnalyticsMfe from './pages/mfe/AnalyticsMfe'
+import ApiTester from './pages/ApiTester'
+
 function App() {
-  const [count, setCount] = useState(0)
-  
   return (
-    <>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-      </Routes>
-    </BrowserRouter>
-    </>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/home" element={
+            <ProtectedRoute><Home /></ProtectedRoute>
+          } />
+          <Route path="/dashboard" element={
+            <ProtectedRoute><DashboardMfe /></ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute><AdminMfe /></ProtectedRoute>
+          } />
+          <Route path="/analytics" element={
+            <ProtectedRoute><AnalyticsMfe /></ProtectedRoute>
+          } />
+          <Route path="/api-tester" element={
+            <ProtectedRoute><ApiTester /></ProtectedRoute>
+          } />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
