@@ -13,12 +13,15 @@ export default function LoginForm() {
             [e.target.name]: e.target.value
         });
     };
-
+    const navigate = useNavigate();
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const res = await axios.post("http://localhost:3007/users/login", form);
+        const res = await axios.post("http://localhost:3007/user/login", {
+            username: form.username,
+            password: form.password
+        });
         localStorage.setItem("token", res.data.token);
-        const navigate = useNavigate();
+        
         navigate("/dashboard");
     };
 
