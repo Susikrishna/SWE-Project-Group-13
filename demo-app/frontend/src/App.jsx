@@ -4,7 +4,7 @@ import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 import { BrowserRouter as Router, Routes, Route, BrowserRouter } from 'react-router-dom'
-import Dashboard from './pages/DashBoard'
+import Dashboard from './pages/Dashboard'
 import LoginForm from './components/LoginForm'
 function App() {
   const [count, setCount] = useState(0)

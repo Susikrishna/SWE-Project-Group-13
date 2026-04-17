@@ -20,8 +20,9 @@ export default function LoginForm() {
             username: form.username,
             password: form.password
         });
+        console.log(res);
         localStorage.setItem("token", res.data.token);
-        
+        console.log("Login successful, token stored:", res.data.token);
         navigate("/dashboard");
     };
 
