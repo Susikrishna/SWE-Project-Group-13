@@ -14,7 +14,7 @@ const authorize = async (req, res) => {
   const allowedMicrofrontends = await MfeRegistry.find({
     feature: { $in: mergedMfes }
   }).lean();
-
+  
   return res.status(200).json({
     userId,
     role: roleSummaries[0] || null,
@@ -66,7 +66,7 @@ const checkAccess = async (req, res) => {
   }
 
   const allowed = hasPermission(req.accessProfile, permissionKey);
-
+  
   return res.status(200).json({
     userId: req.accessProfile.userId,
     url,
