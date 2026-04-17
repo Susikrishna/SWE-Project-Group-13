@@ -54,7 +54,7 @@ function RoleForm() {
                         permissionKey: api.permissionKey
                     });
                 });
-                
+                console.log("Fetched MFEs:", mfes);
                 setMicrofrontends(mfes);
                 setMicroservices(Object.values(groupedServices));
             } catch (err) {

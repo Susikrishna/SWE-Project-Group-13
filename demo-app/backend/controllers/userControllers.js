@@ -23,10 +23,11 @@ const authenticateUser = async (req,res) =>{
         if(!await bcrypt.compare(password, user.password)) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
-        jwtToken = jwt.sign(
+        console.log("Roles",user.roles)
+        const jwtToken = jwt.sign(
             {
                 userId: user._id,
-                roles: user.roles
+                roleId: user.roleId || (Array.isArray(user.roles) ? user.roles[0] : null)
             },
             process.env.JWT_SECRET,
             { expiresIn: "24h" }
