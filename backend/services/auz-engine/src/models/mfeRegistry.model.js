@@ -24,6 +24,10 @@ const mfeSchema = new mongoose.Schema(
         allowedPermissions: { type: [String], default: [] },
       }
     ],
+
+    // List of API permission keys that this MFE is authorized to use.
+    // This mirrors the registry-service schema used by role creation.
+    allowedPermissions: { type: [String], default: [] },
     
     // The CDN or hosted URL serving the remote javascript (e.g., 'https://cdn.com/user.js')
     remoteUrl: { type: String, required: true }, 
