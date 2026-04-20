@@ -1,6 +1,7 @@
 const userModel = require("../models/User");
 const bcrypt = require("bcrypt");
-const axios = require("axios")
+const axios = require("axios");
+
 const getUsers = async (req, res) => {
     try {
         const users = await userModel.find().sort({ createdAt: -1 });
@@ -12,12 +13,12 @@ const getUsers = async (req, res) => {
 
 const addNewUser = async (req, res) => {
     try {
-        let { name, username, password, roles } = req.body;
-        
+        let { name, username, password, roles, attributes } = req.body;
+
         if (!name || !username || !password || !roles) {
             return res.status(400).json({ error: "Missing User fields" });
         }
-        
+
         const existingUser = await userModel.findOne({ username });
         if (existingUser) {
             return res.status(409).json({ error: "Username already taken" });
@@ -30,42 +31,65 @@ const addNewUser = async (req, res) => {
             username,
             password: hashedPassword,
             roles,
+            attributes: attributes ?? {},
         });
-        
+
         res.status(201).json(newUser);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 };
+
 const addRoleToUser = async (req, res) => {
     try {
         const { username, roleArr } = req.body;
         const user = await userModel.findOne({ username });
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-        
+        if (!user) return res.status(404).json({ error: "User not found" });
+
         const ROLE_URL = "http://localhost:3002/roles";
-        
+
         for (const roleId of roleArr) {
-            
             try {
                 await axios.get(`${ROLE_URL}/${roleId}`);
             } catch {
                 return res.status(404).json({ error: `Role ${roleId} not found` });
             }
-            
             if (user.roles.includes(roleId)) {
                 return res.status(400).json({ error: `User already has role ${roleId}` });
             }
             user.roles.push(roleId);
         }
-        
+
         await user.save();
-        res.status(200).json({
-            message: "Role added successfully",
-            user: user,
-        });
+        res.status(200).json({ message: "Role added successfully", user });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// ─── NEW: Update ABAC attributes for a user ───────────────────────────────────
+const updateUserAttributes = async (req, res) => {
+    try {
+        const { username, attributes } = req.body;
+
+        if (!username || !attributes) {
+            return res.status(400).json({ error: "username and attributes are required" });
+        }
+
+        const user = await userModel.findOne({ username });
+        if (!user) return res.status(404).json({ error: "User not found" });
+
+        // Merge — only update fields that were provided
+        const allowed = ["department", "clearance", "location", "employeeType", "customTags"];
+        for (const key of allowed) {
+            if (attributes[key] !== undefined) {
+                user.attributes[key] = attributes[key];
+            }
+        }
+        user.markModified("attributes");
+        await user.save();
+
+        res.status(200).json({ message: "Attributes updated", user });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -80,39 +104,30 @@ const clearAllRoles = async (req, res) => {
     }
 };
 
-
-const clearRolesForUser = async (req,res) =>{
-    try{
-        const {username,roleArr} = req.body;
-        console.log(username)
+const clearRolesForUser = async (req, res) => {
+    try {
+        const { username, roleArr } = req.body;
         const user = await userModel.findOne({ username });
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-        if(roleArr.length ==0){
-            return res.status(404).json({error:"Empty Role array"});
-        }
-        
+        if (!user) return res.status(404).json({ error: "User not found" });
+        if (roleArr.length === 0) return res.status(404).json({ error: "Empty Role array" });
+
         const ROLE_URL = "http://localhost:3002/roles";
         for (const roleId of roleArr) {
-            try {
-                await axios.get(`${ROLE_URL}/${roleId}`);
-            } catch {
-                return res.status(404).json({ error: `Role ${roleId} not found` });
-            }
+            try { await axios.get(`${ROLE_URL}/${roleId}`); }
+            catch { return res.status(404).json({ error: `Role ${roleId} not found` }); }
         }
-        
         for (const roleId of roleArr) {
             if (!user.roles.includes(roleId)) {
                 return res.status(400).json({ error: `User does not have role ${roleId}` });
             }
         }
 
-        user.roles = user.roles.filter((role) => !roleArr.includes(role));
+        user.roles = user.roles.filter(r => !roleArr.includes(r));
         await user.save();
         res.status(200).json({ message: "Roles removed successfully", user });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-}
-module.exports = { getUsers, addNewUser , addRoleToUser, clearAllRoles, clearRolesForUser};
+};
+
+module.exports = { getUsers, addNewUser, addRoleToUser, updateUserAttributes, clearAllRoles, clearRolesForUser };
