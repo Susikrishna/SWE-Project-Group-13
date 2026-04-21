@@ -10,17 +10,23 @@ const { resolvePermission } = require("../utils/resolvePermission");
 const authorize = async (req, res) => {
   const { userId, roleSummaries, mergedPermissions, mergedMfes } = req.accessProfile;
 
-  // We must fetch MFE Registry data so the React Shell knows the "remoteUrls" to load
+  // Fetch current active MFE registry entries so the React shell knows what to load.
   const allowedMicrofrontends = await MfeRegistry.find({
-    feature: { $in: mergedMfes }
+    feature: { $in: mergedMfes },
+    isActive: { $ne: false },
   }).lean();
+
+  const activeMicrofrontends = allowedMicrofrontends.map((mfe) => ({
+    ...mfe,
+    components: (mfe.components || []).filter((component) => component.isActive !== false),
+  }));
 
   return res.status(200).json({
     userId,
     role: roleSummaries[0] || null,
     roles: roleSummaries,
     permissions: mergedPermissions, // e.g. ["user-svc:profile:read"]
-    microfrontends: allowedMicrofrontends, // Sends back the full object with route/remoteUrl/module
+    microfrontends: activeMicrofrontends, // Sends back route/remoteUrl/module plus permission mappings
   });
 };
 
@@ -66,7 +72,7 @@ const checkAccess = async (req, res) => {
   }
 
   const allowed = hasPermission(req.accessProfile, permissionKey);
-
+  
   return res.status(200).json({
     userId: req.accessProfile.userId,
     url,

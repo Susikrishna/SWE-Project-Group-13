@@ -15,7 +15,6 @@ const logger = (action) => async (req, res, next) => {
             } else {
                 decision = "DENY";
             }
-            console.log(req.accessProfile)
             await Log.create({
                 timestamp: new Date(),
                 userId: req.accessProfile?.userId ?? "NA",
