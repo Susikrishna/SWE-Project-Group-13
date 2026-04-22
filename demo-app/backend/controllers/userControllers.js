@@ -23,19 +23,28 @@ const authenticateUser = async (req,res) =>{
         if(!await bcrypt.compare(password, user.password)) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
-        console.log("Roles",user.roles)
+        console.log(`[Login] Authenticating user: ${username}`);
+        
+        // Correctly map roleId and roleIds for Auz Engine compatibility
+        const payload = {
+            userId: user.username, // Auz Engine expects username here for attribute lookups
+            id: user._id,          // Keep MongoDB _id for local backend lookups
+            roleId: user.roles && user.roles.length > 0 ? user.roles[0] : null,
+            roleIds: user.roles || []
+        };
+
+        console.log(`[Login] Signing JWT with payload:`, payload);
+        
         const jwtToken = jwt.sign(
-            {
-                userId: user._id,
-                roleId: user.roleId || (Array.isArray(user.roles) ? user.roles[0] : null)
-            },
+            payload,
             process.env.JWT_SECRET,
             { expiresIn: "24h" }
         );
+        
         res.status(200).json({ token: jwtToken });
 
     } catch (err) {
-        console.error(err);
+        console.error(`[Login] Error:`, err);
         res.status(500).json({ message: "Server error" });
     }
 }

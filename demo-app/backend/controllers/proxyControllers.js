@@ -9,7 +9,8 @@ const AUZ_ENGINE_URL = process.env.AUZ_ENGINE_URL || "http://localhost:3000";
  */
 const getMe = async (req, res) => {
     try {
-        const user = await userModel.findById(req.userId).select("-password");
+        // Use the database _id (dbId) extracted from the token for the lookup
+        const user = await userModel.findById(req.dbId).select("-password");
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -26,13 +27,16 @@ const getMe = async (req, res) => {
  */
 const proxyAuthorize = async (req, res) => {
     try {
+        console.log(`[Proxy] Authorizing token with AUZ Engine at: ${AUZ_ENGINE_URL}/auth/authorize`);
         const response = await axios.get(`${AUZ_ENGINE_URL}/auth/authorize`, {
             headers: {
                 Authorization: `Bearer ${req.token}`,
             },
         });
+        console.log(`[Proxy] Authorization successful`);
         res.status(200).json(response.data);
     } catch (err) {
+        console.error(`[Proxy] Authorization failed:`, err.response?.data || err.message);
         const status = err.response?.status || 500;
         const data = err.response?.data || { error: "Failed to reach AUZ Engine" };
         res.status(status).json(data);

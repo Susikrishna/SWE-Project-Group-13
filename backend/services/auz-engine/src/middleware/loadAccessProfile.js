@@ -33,13 +33,18 @@ const {
 const loadAccessProfile = async (req, res, next) => {
     try {
         const tokenPayload = req.tokenPayload || {};
+        console.log(`[AuzEngine] Received Token Payload:`, tokenPayload);
+        
         const roleIds = extractRoleIdsFromPayload(tokenPayload);
+        console.log(`[AuzEngine] Extracted Role IDs:`, roleIds);
 
         if (roleIds.length === 0) {
+            console.warn(`[AuzEngine] Missing roleId in token for user: ${tokenPayload.userId}`);
             return res.status(400).json({ error: "Token payload missing roleId" });
         }
 
         if (!validateRoleIds(roleIds)) {
+            console.warn(`[AuzEngine] Invalid role IDs:`, roleIds);
             return res.status(400).json({ error: "Invalid role IDs in token" });
         }
 
@@ -63,17 +68,26 @@ const loadAccessProfile = async (req, res, next) => {
         let subjectAttributes = buildDefaultAttributes();
 
         if (userId) {
+            console.log(`[AuzEngine] Looking up user by username: ${userId}`);
             const user = await User.findOne({ username: userId }).lean();
-            if (user && user.attributes) {
-                const a = user.attributes;
-                subjectAttributes = {
-                    department:    a.department    ?? null,
-                    clearance:     a.clearance     ?? null,
-                    clearanceLevel: resolveClearanceLevel(a.clearance, a.clearanceLevel),
-                    location:      a.location      ?? null,
-                    employeeType:  a.employeeType  ?? null,
-                    customTags:    a.customTags    ?? [],
-                };
+            if (user) {
+                console.log(`[AuzEngine] User found with roles:`, user.roles);
+                if (user.attributes) {
+                    const a = user.attributes;
+                    subjectAttributes = {
+                        department:    a.department    ?? null,
+                        clearance:     a.clearance     ?? null,
+                        clearanceLevel: resolveClearanceLevel(a.clearance, a.clearanceLevel),
+                        location:      a.location      ?? null,
+                        employeeType:  a.employeeType  ?? null,
+                        customTags:    a.customTags    ?? [],
+                    };
+                    console.log(`[AuzEngine] Loaded subject attributes:`, subjectAttributes);
+                } else {
+                    console.log(`[AuzEngine] No custom attributes found for user.`);
+                }
+            } else {
+                console.warn(`[AuzEngine] User not found in database: ${userId}`);
             }
         }
 

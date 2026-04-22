@@ -26,27 +26,27 @@ trap cleanup SIGINT SIGTERM
 
 # 1. Start Demo Backend (Port 3007)
 echo -e "${GREEN}🖥️  [1/5] Starting Demo Backend (Port 3007)...${NC}"
-cd "$SCRIPT_DIR/backend" && npm run dev > /dev/null 2>&1 &
+cd "$SCRIPT_DIR/backend" && npm run dev 2>&1 | sed "s/^/  [backend]   /" &
 BACKEND_PID=$!
 
 # 2. Build & Serve Dashboard MFE Remote (Port 5010)
 echo -e "${GREEN}📦 [2/5] Building & Serving Dashboard MFE (Port 5010)...${NC}"
-cd "$SCRIPT_DIR/mfe-dashboard" && npm run build > /dev/null 2>&1 && npm run preview > /dev/null 2>&1 &
+cd "$SCRIPT_DIR/mfe-dashboard" && (npm run build && npm run preview) 2>&1 | sed "s/^/  [dashboard] /" &
 MFE_DASH_PID=$!
 
 # 3. Build & Serve Admin MFE Remote (Port 5011)
 echo -e "${GREEN}📦 [3/5] Building & Serving Admin MFE (Port 5011)...${NC}"
-cd "$SCRIPT_DIR/mfe-admin" && npm run build > /dev/null 2>&1 && npm run preview > /dev/null 2>&1 &
+cd "$SCRIPT_DIR/mfe-admin" && (npm run build && npm run preview) 2>&1 | sed "s/^/  [admin]     /" &
 MFE_ADMIN_PID=$!
 
 # 4. Build & Serve Analytics MFE Remote (Port 5012)
 echo -e "${GREEN}📦 [4/5] Building & Serving Analytics MFE (Port 5012)...${NC}"
-cd "$SCRIPT_DIR/mfe-analytics" && npm run build > /dev/null 2>&1 && npm run preview > /dev/null 2>&1 &
+cd "$SCRIPT_DIR/mfe-analytics" && (npm run build && npm run preview) 2>&1 | sed "s/^/  [analytics] /" &
 MFE_ANALYTICS_PID=$!
 
 # 5. Start Demo Shell Frontend (Port 5173)
 echo -e "${GREEN}📱 [5/5] Starting Demo Shell Frontend (Port 5173)...${NC}"
-cd "$SCRIPT_DIR/frontend" && npm run dev > /dev/null 2>&1 &
+cd "$SCRIPT_DIR/frontend" && npm run dev 2>&1 | sed "s/^/  [shell]     /" &
 FRONTEND_PID=$!
 
 echo -e "\n${CYAN}✨ Distributed Demo app is spinning up!${NC}"
