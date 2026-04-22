@@ -11,43 +11,42 @@ const getUsers = async (req, res) => {
     }
 };
 
-const authenticateUser = async (req,res) =>{
+const authenticateUser = async (req, res) => {
     try {
         const { username, password } = req.body;
-        
         const user = await userModel.findOne({ username });
+
         if (!user) {
             return res.status(400).json({ message: "User not found" });
         }
-        
-        if(!await bcrypt.compare(password, user.password)) {
+
+        if (!await bcrypt.compare(password, user.password)) {
             return res.status(400).json({ message: "Invalid credentials" });
         }
-        console.log(`[Login] Authenticating user: ${username}`);
-        
-        // Correctly map roleId and roleIds for Auz Engine compatibility
+
+        console.log("Roles", user.roles);
+
         const payload = {
-            userId: user.username, // Auz Engine expects username here for attribute lookups
-            id: user._id,          // Keep MongoDB _id for local backend lookups
+            userId: user.username,
+            id: user._id,
             roleId: user.roles && user.roles.length > 0 ? user.roles[0] : null,
             roleIds: user.roles || []
         };
-
-        console.log(`[Login] Signing JWT with payload:`, payload);
-        
         const jwtToken = jwt.sign(
             payload,
             process.env.JWT_SECRET,
             { expiresIn: "24h" }
         );
-        
+
         res.status(200).json({ token: jwtToken });
 
     } catch (err) {
-        console.error(`[Login] Error:`, err);
+        console.error(err);
         res.status(500).json({ message: "Server error" });
     }
-}
+};
+
+
 
 const addNewUser = async (req, res) => {
     try {

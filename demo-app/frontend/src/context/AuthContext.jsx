@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
         } else {
             setLoading(false);
         }
-    }, []);
+    }, [token,hydrate]);
 
     const login = async (username, password) => {
         const res = await axios.post(`${API_BASE}/user/login`, {
