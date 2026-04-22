@@ -15,6 +15,7 @@ function RoleForm() {
     // State for flattened permissions
     const [selectedPermissions, setSelectedPermissions] = useState(new Set());
     const [selectedMfes, setSelectedMfes] = useState(new Set());
+    const [selectedComponents, setSelectedComponents] = useState(new Set());
     const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set()); // Whitelist for hard restriction
 
     useEffect(() => {
@@ -53,7 +54,7 @@ function RoleForm() {
                         permissionKey: api.permissionKey
                     });
                 });
-                
+                console.log("Fetched MFEs:", mfes);
                 setMicrofrontends(mfes);
                 setMicroservices(Object.values(groupedServices));
             } catch (err) {
@@ -68,24 +69,19 @@ function RoleForm() {
     
     // Update whitelist whenever MFEs change
     useEffect(() => {
-        const activeFeatures = new Set();
-        selectedMfes.forEach(key => activeFeatures.add(key.split("::")[0]));
-        
         const newWhitelist = new Set();
-        activeFeatures.forEach(fid => {
+        selectedMfes.forEach(fid => {
             const mfe = microfrontends.find(m => m.id === fid);
             if (mfe) mfe.allowedPermissions.forEach(p => newWhitelist.add(p));
         });
 
         // Add permissions from specifically selected components
-        selectedMfes.forEach(key => {
-            if (key.includes("::")) {
-                const fid = key.split("::")[0];
-                const mfe = microfrontends.find(m => m.id === fid);
-                if (mfe) {
-                    const comp = mfe.components.find(c => c.componentKey === key);
-                    if (comp) comp.allowedPermissions.forEach(p => newWhitelist.add(p));
-                }
+        selectedComponents.forEach(key => {
+            const fid = key.split("::")[0];
+            const mfe = microfrontends.find(m => m.id === fid);
+            if (mfe) {
+                const comp = mfe.components.find(c => c.componentKey === key);
+                if (comp) comp.allowedPermissions.forEach(p => newWhitelist.add(p));
             }
         });
 
@@ -99,29 +95,18 @@ function RoleForm() {
             });
             return next;
         });
-    }, [selectedMfes, microfrontends]);
+    }, [selectedMfes, selectedComponents, microfrontends]);
 
     const toggleMfe = (mfeId, components) => {
-        const hasAny = components.length > 0 
-            ? components.some(c => selectedMfes.has(c.componentKey))
-            : selectedMfes.has(mfeId);
-            
+        const hasAny = selectedMfes.has(mfeId);
         const mfe = microfrontends.find(m => m.id === mfeId);
 
         setSelectedMfes(prev => {
             const next = new Set(prev);
             if (hasAny) {
-                if (components.length > 0) {
-                    components.forEach(c => next.delete(c.componentKey));
-                } else {
-                    next.delete(mfeId);
-                }
+                next.delete(mfeId);
             } else {
-                if (components.length > 0) {
-                    components.forEach(c => next.add(c.componentKey));
-                } else {
-                    next.add(mfeId);
-                }
+                next.add(mfeId);
                 // Default Assignment: Add all related permissions when MFE is selected
                 if (mfe) {
                     setSelectedPermissions(pPrev => {
@@ -136,13 +121,23 @@ function RoleForm() {
             }
             return next;
         });
+
+        setSelectedComponents(prev => {
+            const next = new Set(prev);
+            if (hasAny) {
+                components.forEach(c => next.delete(c.componentKey));
+            } else {
+                components.forEach(c => next.add(c.componentKey));
+            }
+            return next;
+        });
     };
     
     const toggleComponent = (componentKey) => {
         const mfeId = componentKey.split("::")[0];
         const mfe = microfrontends.find(m => m.id === mfeId);
         
-        setSelectedMfes(prev => {
+        setSelectedComponents(prev => {
             const next = new Set(prev);
             const isAdding = !next.has(componentKey);
             if (next.has(componentKey)) next.delete(componentKey);
@@ -150,6 +145,12 @@ function RoleForm() {
 
             // Auto-select permissions specific to this component when added
             if (isAdding) {
+                setSelectedMfes(mfePrev => {
+                    const mfeNext = new Set(mfePrev);
+                    mfeNext.add(mfeId);
+                    return mfeNext;
+                });
+
                 const compToSelect = mfe?.components?.find(c => c.componentKey === componentKey);
                 if (compToSelect || mfe) {
                     setSelectedPermissions(pPrev => {
@@ -217,6 +218,7 @@ function RoleForm() {
             setExpiresAt("");
             setSelectedPermissions(new Set());
             setSelectedMfes(new Set());
+            setSelectedComponents(new Set());
         } catch (err) {
             alert(err.response?.data?.error || "Failed to create role.");
         }
@@ -254,9 +256,7 @@ function RoleForm() {
                     ) : (
                         <div className="service-list">
                             {microfrontends.map((item) => {
-                                const hasAny = item.components.length > 0 
-                                    ? item.components.some(c => selectedMfes.has(c.componentKey))
-                                    : selectedMfes.has(item.id);
+                                const hasAny = selectedMfes.has(item.id);
                                     
                                 return (
                                     <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
@@ -285,7 +285,7 @@ function RoleForm() {
                                                 <p className="actions-title-premium" style={{ marginBottom: "12px" }}>Components</p>
                                                 <div className="actions-grid">
                                                     {item.components.map((comp) => {
-                                                        const isSelected = selectedMfes.has(comp.componentKey);
+                                                        const isSelected = selectedComponents.has(comp.componentKey);
                                                         return (
                                                             <label
                                                                 key={comp.componentKey}

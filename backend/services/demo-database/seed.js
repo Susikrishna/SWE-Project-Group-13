@@ -7,6 +7,7 @@
 db.apiregistries.deleteMany({});
 db.mferegistries.deleteMany({});
 db.roles.deleteMany({});
+db.users.deleteMany({});
 
 // ─── 2. Seed API Registry (Microservices) ───────────────────────────────────
 // FULLY CORRECTED: Added basePath, route, and method to satisfy Mongoose schema
@@ -39,13 +40,75 @@ db.apiregistries.insertMany([
   { service: "notification-service", basePath: "/api/v1/notifications", route: "/:id", method: "GET", resource: "notification", action: "read", permissionKey: "notification-service:notification:read", isActive: true },
   { service: "notification-service", basePath: "/api/v1/notifications", route: "/templates", method: "PUT", resource: "template", action: "manage", permissionKey: "notification-service:template:manage", isActive: true },
 
-  // Report Service (Decommissioned)
-  { service: "report-service", basePath: "/api/v1/reports", route: "/:id", method: "GET", resource: "report", action: "read", permissionKey: "report-service:report:read", isActive: false },
-  { service: "report-service", basePath: "/api/v1/reports", route: "/generate", method: "POST", resource: "report", action: "generate", permissionKey: "report-service:report:generate", isActive: false },
-  { service: "report-service", basePath: "/api/v1/reports", route: "/:id/export", method: "GET", resource: "report", action: "export", permissionKey: "report-service:report:export", isActive: false },
-  { service: "report-service", basePath: "/api/v1/reports", route: "/schedule", method: "POST", resource: "report", action: "schedule", permissionKey: "report-service:report:schedule", isActive: false }
+  // Report Service
+  { service: "report-service", basePath: "/api/v1/reports", route: "/:id", method: "GET", resource: "report", action: "read", permissionKey: "report-service:report:read", isActive: true },
+  { service: "report-service", basePath: "/api/v1/reports", route: "/generate", method: "POST", resource: "report", action: "generate", permissionKey: "report-service:report:generate", isActive: true },
+  { service: "report-service", basePath: "/api/v1/reports", route: "/:id/export", method: "GET", resource: "report", action: "export", permissionKey: "report-service:report:export", isActive: true },
+  { service: "report-service", basePath: "/api/v1/reports", route: "/schedule", method: "POST", resource: "report", action: "schedule", permissionKey: "report-service:report:schedule", isActive: true }
 ]);
 print("✓ Inserted API Registry documents");
+
+// ─── Permission Groups Used By MFE Registry And Roles ──────────────────────
+const DASHBOARD_ROOT_PERMISSIONS = [
+  "user-service:user:read",
+  "billing-service:invoice:read",
+  "billing-service:subscription:read",
+  "notification-service:notification:read"
+];
+
+const DASHBOARD_PROFILE_PERMISSIONS = [
+  "user-service:user:read",
+  "user-service:user:update"
+];
+
+const ADMIN_ROOT_PERMISSIONS = [
+  "auth-service:token:refresh",
+  "user-service:user:read",
+  "user-service:user:list",
+  "notification-service:notification:read"
+];
+
+const ADMIN_USER_MANAGEMENT_PERMISSIONS = [
+  "auth-service:session:create",
+  "auth-service:session:revoke",
+  "auth-service:token:refresh",
+  "auth-service:mfa:enable",
+  "auth-service:mfa:disable",
+  "user-service:user:read",
+  "user-service:user:create",
+  "user-service:user:update",
+  "user-service:user:delete",
+  "user-service:user:list"
+];
+
+const ADMIN_NOTIFICATION_PERMISSIONS = [
+  "notification-service:email:send",
+  "notification-service:sms:send",
+  "notification-service:notification:read",
+  "notification-service:template:manage"
+];
+
+const ANALYTICS_ROOT_PERMISSIONS = [
+  "billing-service:invoice:read",
+  "billing-service:subscription:read",
+  "report-service:report:read"
+];
+
+const ANALYTICS_BILLING_PERMISSIONS = [
+  "billing-service:invoice:read",
+  "billing-service:invoice:create",
+  "billing-service:subscription:read",
+  "billing-service:subscription:update",
+  "billing-service:subscription:cancel",
+  "billing-service:payment:refund"
+];
+
+const ANALYTICS_REPORT_PERMISSIONS = [
+  "report-service:report:read",
+  "report-service:report:generate",
+  "report-service:report:export",
+  "report-service:report:schedule"
+];
 
 // ─── 3. Seed MFE Registry (Microfrontends) ──────────────────────────────────
 db.mferegistries.insertMany([
@@ -53,84 +116,86 @@ db.mferegistries.insertMany([
     name: "Dashboard App",
     feature: "dashboard-mfe",
     route: "/dashboard",
+    isActive: true,
     components: [
       { 
         name: "Main Stats", 
         route: "/stats",
         description: "Dashboard statistics overview",
-        allowedPermissions: [
-          "billing-service:invoice:read", "billing-service:subscription:read",
-          "notification-service:notification:read"
-        ]
+        isActive: true,
+        allowedPermissions: DASHBOARD_ROOT_PERMISSIONS
       },
       { 
         name: "User Profile", 
         route: "/profile",
         description: "Manage personal profile settings",
-        allowedPermissions: [
-          "user-service:user:read", "user-service:user:update"
-        ]
+        isActive: true,
+        allowedPermissions: DASHBOARD_PROFILE_PERMISSIONS
       }
     ],
-    allowedPermissions: [],
-    remoteUrl: "http://localhost:5000/assets/remoteEntry.js",
+    allowedPermissions: DASHBOARD_ROOT_PERMISSIONS,
+    remoteUrl: "http://localhost:5010/assets/remoteEntry.js",
     module: "./DashboardApp",
-    description: "Main user-facing dashboard microfrontend."
+    description: "User workspace with account summary, billing overview, and notifications."
   },
   {
     name: "Admin Panel",
     feature: "admin-mfe",
     route: "/admin",
+    isActive: true,
     components: [
       { 
         name: "User Management", 
         route: "/users",
         description: "Manage platform users and sessions",
-        allowedPermissions: [
-          "auth-service:session:create", "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
-          "user-service:user:read", "user-service:user:create", "user-service:user:update", "user-service:user:delete", "user-service:user:list"
-        ]
+        isActive: true,
+        allowedPermissions: ADMIN_USER_MANAGEMENT_PERMISSIONS
       },
       { 
         name: "Permissions Overview", 
         route: "/permissions",
-        description: "Notification and permission templates",
-        allowedPermissions: [
-          "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage"
-        ]
+        description: "Notification templates and permission audit utilities",
+        isActive: true,
+        allowedPermissions: ADMIN_NOTIFICATION_PERMISSIONS
       }
     ],
-    allowedPermissions: [],
-    remoteUrl: "http://localhost:5001/assets/remoteEntry.js",
+    allowedPermissions: ADMIN_ROOT_PERMISSIONS,
+    remoteUrl: "http://localhost:5011/assets/remoteEntry.js",
     module: "./AdminApp",
-    description: "Internal admin interface for managing users and configuration."
+    description: "Internal administration tools for users, sessions, security, and notification configuration."
   },
   {
     name: "Analytics Dashboard",
     feature: "analytics-mfe",
     route: "/analytics",
+    isActive: true,
     components: [
       { 
-        name: "Sales Reports", 
+        name: "Revenue Overview", 
         route: "/sales",
-        description: "Billing and invoice analytics",
-        allowedPermissions: [
-          "billing-service:invoice:read", "billing-service:subscription:read", "billing-service:payment:refund"
-        ]
+        description: "Read-only billing and subscription analytics",
+        isActive: true,
+        allowedPermissions: ANALYTICS_ROOT_PERMISSIONS
+      },
+      {
+        name: "Billing Operations",
+        route: "/billing",
+        description: "Finance actions for invoices, subscriptions, and refunds",
+        isActive: true,
+        allowedPermissions: ANALYTICS_BILLING_PERMISSIONS
       },
       { 
-        name: "System Metrics", 
-        route: "/metrics",
-        description: "System performance reports",
-        allowedPermissions: [
-          "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
-        ]
+        name: "Report Center", 
+        route: "/reports",
+        description: "Generate, export, and schedule reports",
+        isActive: true,
+        allowedPermissions: ANALYTICS_REPORT_PERMISSIONS
       }
     ],
-    allowedPermissions: [],
-    remoteUrl: "http://localhost:5002/assets/remoteEntry.js",
+    allowedPermissions: ANALYTICS_ROOT_PERMISSIONS,
+    remoteUrl: "http://localhost:5012/assets/remoteEntry.js",
     module: "./AnalyticsApp",
-    description: "Business intelligence and analytics microfrontend."
+    description: "Business intelligence, billing operations, and reporting microfrontend."
   }
 ]);
 print("✓ Inserted MFE Registry documents");
@@ -170,13 +235,13 @@ db.roles.insertMany([
   {
     _id: "role_support-agent",
     name: "support-agent",
-    description: "Customer support staff with read access and limited user management.",
+    description: "Customer support staff with dashboard visibility and limited admin tools.",
     permissions: [
       "user-service:user:read", "user-service:user:list", "user-service:user:update",
       "billing-service:invoice:read", "billing-service:subscription:read",
       "notification-service:email:send", "notification-service:notification:read"
     ],
-    mfeAccess: ["dashboard-mfe"],
+    mfeAccess: ["dashboard-mfe", "admin-mfe"],
     isTemp: false,
     createdAt: new Date("2024-01-20T09:00:00Z"),
     updatedAt: new Date("2024-01-20T09:00:00Z")
@@ -210,11 +275,12 @@ db.roles.insertMany([
   {
     _id: "role_analyst",
     name: "analyst",
-    description: "Read-only access to analytics, reports, and dashboards.",
+    description: "Read-only access to analytics and exported reports.",
     permissions: [
+      "billing-service:invoice:read", "billing-service:subscription:read",
       "report-service:report:read", "report-service:report:export"
     ],
-    mfeAccess: ["dashboard-mfe", "analytics-mfe"],
+    mfeAccess: ["analytics-mfe"],
     isTemp: false,
     createdAt: new Date("2024-03-01T09:00:00Z"),
     updatedAt: new Date("2024-03-01T09:00:00Z")
@@ -227,7 +293,7 @@ db.roles.insertMany([
       "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage",
       "user-service:user:read", "user-service:user:list"
     ],
-    mfeAccess: [],
+    mfeAccess: ["admin-mfe"],
     isTemp: false,
     createdAt: new Date("2024-04-15T10:00:00Z"),
     updatedAt: new Date("2024-04-15T10:00:00Z")
@@ -250,9 +316,9 @@ db.roles.insertMany([
       "user-service:user:read", "user-service:user:list",
       "report-service:report:read", "report-service:report:generate"
     ],
-    mfeAccess: ["dashboard-mfe", "analytics-mfe"],
+    mfeAccess: ["admin-mfe", "analytics-mfe"],
     isTemp: true,
-    expiresAt: new Date("2025-08-31T23:59:59Z"), 
+    expiresAt: new Date("2026-08-31T23:59:59Z"), 
     createdAt: new Date("2025-05-20T12:00:00Z"),
     updatedAt: new Date("2025-05-20T12:00:00Z")
   },
@@ -264,13 +330,61 @@ db.roles.insertMany([
       "billing-service:invoice:read", "billing-service:subscription:read",
       "report-service:report:read", "report-service:report:export"
     ],
-    mfeAccess: ["admin-mfe"],
+    mfeAccess: ["analytics-mfe"],
     isTemp: true,
-    expiresAt: new Date("2025-09-30T23:59:59Z"), 
+    expiresAt: new Date("2026-09-30T23:59:59Z"), 
     createdAt: new Date("2025-08-25T14:00:00Z"),
     updatedAt: new Date("2025-08-25T14:00:00Z")
   }
 ]);
 print("✓ Inserted 10 Role documents");
+
+// ─── 5. Seed Users ──────────────────────────────────────────────────────────
+// Password is "password" hashed with bcrypt (10 rounds)
+const hashedPassword = "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi";
+
+db.users.insertMany([
+  {
+    name: "Alice Johnson",
+    username: "alice_admin",
+    password: hashedPassword,
+    roles: ["role_super-admin"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "Bob Smith",
+    username: "bob_user",
+    password: hashedPassword,
+    roles: ["role_user"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "Carol White",
+    username: "carol_support",
+    password: hashedPassword,
+    roles: ["role_support-agent"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "David Brown",
+    username: "david_finance",
+    password: hashedPassword,
+    roles: ["role_finance-manager"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    name: "Eva Martinez",
+    username: "eva_analyst",
+    password: hashedPassword,
+    roles: ["role_analyst"],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+]);
+print("✓ Inserted 5 User documents");
 
 print("🚀 Seed complete! Database is hydrated with flattened, high-performance schema.");
