@@ -2,12 +2,15 @@
 const Log = require("../models/LogModel");
 
 const logger = (action) => async (req, res, next) => {
+    const startTime = Date.now();
     const origResponse = res.json.bind(res);
 
     res.json = async (body) => {
+        const responseTime = Date.now() - startTime;
+
         try {
             let decision;
-            
+
             if (action === "authorize") {
                 decision = "BULK";
             } else if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -15,6 +18,9 @@ const logger = (action) => async (req, res, next) => {
             } else {
                 decision = "DENY";
             }
+
+            console.log(req.accessProfile);
+
             await Log.create({
                 timestamp: new Date(),
                 userId: req.accessProfile?.userId ?? "NA",
@@ -24,6 +30,7 @@ const logger = (action) => async (req, res, next) => {
                 decision,
                 reason: body?.error ?? null,
                 statusCode: res.statusCode,
+                responseTime,
             });
         } catch (err) {
             console.error("Logging failed:", err.message);

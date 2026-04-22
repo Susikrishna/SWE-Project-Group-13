@@ -1,68 +1,48 @@
 const Role = require("../models/Role");
-const MfeRegistry = require("../models/MfeRegistry");
 
-const editRoleById = async (req,res) =>{
-    try{
-        const {roleId,name,description,permissions, mfeAccess,isTemp,expiresAt} = req.body;
-        if(!roleId){
-            return res.status(400).json({ error: "Role ID is required" })
-        }
-        const newRole = {
-            name:name.trim(),
-            description:description,
-            permissions: permissions ?? [],
-            mfeAccess : mfeAccess ?? [],
-            isTemp : isTemp ?? false,
-            expiresAt: isTemp ? expiresAt : null,
-        }
+const editRole = async (req, res) => {
+    try {
+        const { roleId, name, description, permissions, mfeAccess, isTemp, expiresAt, abacPolicies } = req.body;
 
-        // Hard Restriction Validation
-        if (mfeAccess && mfeAccess.length > 0) {
-            const selectedFeatureIds = Array.from(new Set(mfeAccess.map(key => key.split("::")[0])));
-            const registries = await MfeRegistry.find({ feature: { $in: selectedFeatureIds } });
-            
-            const whitelist = new Set();
-            registries.forEach(reg => {
-                // Fallback to MFE root permissions if any
-                if (reg.allowedPermissions) {
-                    reg.allowedPermissions.forEach(p => whitelist.add(p));
-                }
-                // Include component-level permissions
-                if (reg.components && Array.isArray(reg.components)) {
-                    reg.components.forEach(comp => {
-                        if (comp.allowedPermissions) {
-                            comp.allowedPermissions.forEach(p => whitelist.add(p));
-                        }
-                    });
-                }
-            });
+        if (!roleId) return res.status(400).json({ error: "roleId is required" });
 
-            const unauthorized = (permissions ?? []).filter(p => !whitelist.has(p));
-            if (unauthorized.length > 0) {
-                return res.status(403).json({ 
-                    error: "Hard Restriction Violation", 
-                    details: `The following permissions are not authorized by the selected MFEs: ${unauthorized.join(", ")}` 
-                });
+        const role = await Role.findById(roleId);
+        if (!role) return res.status(404).json({ error: "Role not found" });
+
+        // ── Validate abacPolicies ──────────────────────────────────────────
+        const VALID_OPERATORS = ["eq", "neq", "in", "nin", "gte_clearance"];
+        if (abacPolicies) {
+            if (!Array.isArray(abacPolicies)) {
+                return res.status(400).json({ error: "abacPolicies must be an array" });
             }
-        } else if (permissions && permissions.length > 0) {
-            return res.status(403).json({ error: "Hard Restriction Violation", details: "Permissions cannot be assigned without at least one associated MFE." });
+            for (const policy of abacPolicies) {
+                if (!policy.permissionKey) {
+                    return res.status(400).json({ error: "Each abacPolicy must have a permissionKey" });
+                }
+                for (const cond of (policy.conditions || [])) {
+                    if (!cond.attribute || !cond.operator || cond.value === undefined) {
+                        return res.status(400).json({ error: "Each condition needs attribute, operator, and value" });
+                    }
+                    if (!VALID_OPERATORS.includes(cond.operator)) {
+                        return res.status(400).json({ error: `Invalid operator: ${cond.operator}` });
+                    }
+                }
+            }
         }
 
-        const response = await Role.findByIdAndUpdate(roleId,{
-            $set: newRole
-        },{
-            new:true
-        })
+        if (name        !== undefined) role.name        = name;
+        if (description !== undefined) role.description = description;
+        if (permissions !== undefined) role.permissions = permissions;
+        if (mfeAccess   !== undefined) role.mfeAccess   = mfeAccess;
+        if (isTemp      !== undefined) role.isTemp      = isTemp;
+        if (expiresAt   !== undefined) role.expiresAt   = isTemp ? expiresAt : null;
+        if (abacPolicies!== undefined) role.abacPolicies= abacPolicies;
 
-        if (!response) {
-            return res.status(404).json({ error: "Role not found" });
-        }
-
-        return res.status(200).json({ message: "Role updated successfully", role: response});
-    
-    }catch(err){
-        return res.status(500).json({error:err.message})
+        await role.save();
+        res.status(200).json(role);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-}
+};
 
-module.exports = {editRoleById };
+module.exports = { editRole };
