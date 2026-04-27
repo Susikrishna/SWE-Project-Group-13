@@ -4,24 +4,30 @@ import { styles } from "../styles/registryTheme";
 
 const MfeNavbar = () => {
   const { pathname } = useLocation();
-  
+
   // Helper to check if a link is active
   const isActive = (path) => pathname.endsWith(path);
 
   return (
     <div style={styles.rolesTopBar}>
       <div style={styles.barNav}>
-        <Link 
-          to="" 
+        <Link
+          to=""
           style={{ ...styles.barLink, ...(isActive("/registry") || pathname === "/" ? styles.barLinkActive : {}) }}
         >
           Register Component
         </Link>
-        <Link 
-          to="list" 
+        <Link
+          to="list"
           style={{ ...styles.barLink, ...(isActive("list") ? styles.barLinkActive : {}) }}
         >
           View Registry
+        </Link>
+        <Link
+          to="permission-sets"
+          style={{ ...styles.barLink, ...(isActive("permission-sets") ? styles.barLinkActive : {}) }}
+        >
+          Permission Sets
         </Link>
       </div>
     </div>

@@ -5,6 +5,7 @@ const connectDB = require("./config/db.config");
 
 const apiRoutes = require("./routes/apiRegistry.routes");
 const mfeRoutes = require("./routes/mfeRegistry.routes");
+const permissionSetRoutes = require("./routes/permissionSet.routes");
 
 const app = express();
 
@@ -16,17 +17,21 @@ app.use(express.json()); // Parse incoming JSON payloads
 connectDB();
 
 // --- Route Mounting ---
-// Mount API Registry routes. 
+// Mount API Registry routes.
 // Frontend calls: POST /registry/services/bulk
 app.use("/registry/services", apiRoutes);
 
-// Mount MFE Registry routes. 
+// Mount MFE Registry routes.
 // Frontend calls: POST /registry/mfes
 app.use("/registry/mfes", mfeRoutes);
 
+// Mount Permission Set routes.
+// Frontend calls: GET /registry/permission-sets
+app.use("/registry/permission-sets", permissionSetRoutes);
+
 // --- Health Check ---
 app.get("/", (req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
     service: "Registry Service",
     status: "Running 🚀",
     timestamp: new Date().toISOString()

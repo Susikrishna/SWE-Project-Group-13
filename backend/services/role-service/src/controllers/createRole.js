@@ -1,9 +1,12 @@
+const axios = require("axios");
 const Role = require("../models/Role");
 const MfeRegistry = require("../models/MfeRegistry");
 
+const REGISTRY_URL = process.env.REGISTRY_URL || "http://localhost:5001";
+
 const createRole = async (req, res) => {
     try {
-        const { name, description, permissions, mfeAccess, isTemp, expiresAt, abacPolicies } = req.body;
+        const { name, description, permissions, mfeAccess, isTemp, expiresAt, abacPolicies, permissionSetIds } = req.body;
 
         if (!name) {
             return res.status(400).json({ error: "Role name is required" });
@@ -21,6 +24,9 @@ const createRole = async (req, res) => {
         }
         if (mfeAccess && !Array.isArray(mfeAccess)) {
             return res.status(400).json({ error: "mfeAccess must be an array of strings" });
+        }
+        if (permissionSetIds && !Array.isArray(permissionSetIds)) {
+            return res.status(400).json({ error: "permissionSetIds must be an array of strings" });
         }
 
         // ── Validate abacPolicies structure ────────────────────────────────
@@ -45,12 +51,12 @@ const createRole = async (req, res) => {
             }
         }
 
-        // ── Hard Restriction: MFE-permission whitelist check (RBAC) ────────
+        // ── Hard Restriction: build MFE whitelist ──────────────────────────
+        let whitelist = new Set();
         if (mfeAccess && mfeAccess.length > 0) {
             const selectedFeatureIds = Array.from(new Set(mfeAccess.map(key => key.split("::")[0])));
             const registries = await MfeRegistry.find({ feature: { $in: selectedFeatureIds } });
 
-            const whitelist = new Set();
             registries.forEach(reg => {
                 if (reg.allowedPermissions) reg.allowedPermissions.forEach(p => whitelist.add(p));
                 if (reg.components && Array.isArray(reg.components)) {
@@ -60,17 +66,42 @@ const createRole = async (req, res) => {
                 }
             });
 
-            const unauthorized = (permissions || []).filter(p => !whitelist.has(p));
-            if (unauthorized.length > 0) {
+            // Validate direct permissions against whitelist
+            const unauthorizedDirect = (permissions || []).filter(p => !whitelist.has(p));
+            if (unauthorizedDirect.length > 0) {
                 return res.status(403).json({
                     error: "Hard Restriction Violation",
-                    details: `Permissions not authorized by selected MFEs: ${unauthorized.join(", ")}`,
+                    details: `Permissions not authorized by selected MFEs: ${unauthorizedDirect.join(", ")}`,
                 });
             }
-        } else if (permissions && permissions.length > 0) {
+
+            // ── Validate Permission Sets against whitelist ─────────────────
+            if (permissionSetIds && permissionSetIds.length > 0) {
+                let setPermissions = [];
+                try {
+                    const resolveRes = await axios.post(`${REGISTRY_URL}/registry/permission-sets/resolve`, {
+                        ids: permissionSetIds,
+                    });
+                    setPermissions = resolveRes.data.permissions || [];
+                } catch (fetchErr) {
+                    return res.status(502).json({
+                        error: "Could not validate Permission Sets",
+                        details: fetchErr.message,
+                    });
+                }
+
+                const unauthorizedSetPerms = setPermissions.filter(p => !whitelist.has(p));
+                if (unauthorizedSetPerms.length > 0) {
+                    return res.status(403).json({
+                        error: "Hard Restriction Violation (Permission Set)",
+                        details: `Permission Set contains permissions not authorized by selected MFEs: ${unauthorizedSetPerms.join(", ")}`,
+                    });
+                }
+            }
+        } else if ((permissions && permissions.length > 0) || (permissionSetIds && permissionSetIds.length > 0)) {
             return res.status(403).json({
                 error: "Hard Restriction Violation",
-                details: "Permissions cannot be assigned without at least one associated MFE.",
+                details: "Permissions or Permission Sets cannot be assigned without at least one associated MFE.",
             });
         }
 
@@ -80,6 +111,7 @@ const createRole = async (req, res) => {
             description,
             permissions: permissions ?? [],
             mfeAccess: mfeAccess ?? [],
+            permissionSetIds: permissionSetIds ?? [],
             isTemp: isTemp ?? false,
             expiresAt: isTemp ? expiresAt : null,
             abacPolicies: abacPolicies ?? [],

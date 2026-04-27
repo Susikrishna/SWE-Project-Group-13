@@ -12,10 +12,13 @@ function RoleForm() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // State for flattened permissions
     const [selectedPermissions, setSelectedPermissions] = useState(new Set());
     const [selectedMfes, setSelectedMfes] = useState(new Set());
     const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set()); // Whitelist for hard restriction
+
+    // Permission Sets state
+    const [allPermissionSets, setAllPermissionSets] = useState([]);
+    const [selectedPermissionSetIds, setSelectedPermissionSetIds] = useState(new Set());
 
     useEffect(() => {
         const fetchRegistries = async () => {
@@ -56,6 +59,10 @@ function RoleForm() {
                 
                 setMicrofrontends(mfes);
                 setMicroservices(Object.values(groupedServices));
+
+                // Fetch Permission Sets
+                const psRes = await axios.get(`${registryUrl}/registry/permission-sets`);
+                setAllPermissionSets(psRes.data || []);
             } catch (err) {
                 setError("Failed to load services. Please try again.");
             } finally {
@@ -190,8 +197,8 @@ function RoleForm() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (selectedPermissions.size === 0 && selectedMfes.size === 0) {
-            alert("Please select at least one service or microfrontend.");
+        if (selectedPermissions.size === 0 && selectedMfes.size === 0 && selectedPermissionSetIds.size === 0) {
+            alert("Please select at least one service, permission set, or microfrontend.");
             return;
         }
 
@@ -202,6 +209,7 @@ function RoleForm() {
             name: roleName,
             permissions: Array.from(selectedPermissions),
             mfeAccess: Array.from(activeMfes),
+            permissionSetIds: Array.from(selectedPermissionSetIds),
             isTemp,
             ...(isTemp && { expiresAt }),
         };
@@ -217,6 +225,7 @@ function RoleForm() {
             setExpiresAt("");
             setSelectedPermissions(new Set());
             setSelectedMfes(new Set());
+            setSelectedPermissionSetIds(new Set());
         } catch (err) {
             alert(err.response?.data?.error || "Failed to create role.");
         }
@@ -376,6 +385,90 @@ function RoleForm() {
                                                             </label>
                                                         );
                                                     })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <div className="form-divider" />
+
+                    {/* ── Permission Sets Section ── */}
+                    <p className="section-title">Permission Sets</p>
+                    <p className="section-subtitle">
+                        Pre-defined groups of permissions. Only sets whose every permission is
+                        covered by the MFEs you selected above are available.
+                        {selectedMfes.size === 0 && " Select at least one MFE first."}
+                    </p>
+                    {selectedMfes.size === 0 ? (
+                        <p className="status-text warning">Select a Microfrontend above to unlock matching Permission Sets.</p>
+                    ) : (
+                        <div className="service-list">
+                            {allPermissionSets.length === 0 && (
+                                <p className="status-text">No permission sets registered yet.</p>
+                            )}
+                            {allPermissionSets.map((ps) => {
+                                // A set is available only if ALL its permissions are in the MFE whitelist
+                                const isAvailable = ps.permissions.every(p => allowedPermissionsWhitelist.has(p));
+                                const isSelected = selectedPermissionSetIds.has(ps._id);
+                                const blockedPerms = ps.permissions.filter(p => !allowedPermissionsWhitelist.has(p));
+
+                                return (
+                                    <div
+                                        key={ps._id}
+                                        className={`service-card ${isSelected ? "checked" : ""} ${!isAvailable ? "ps-blocked" : ""}`}
+                                        title={!isAvailable ? `Blocked: ${blockedPerms.join(", ")} not in selected MFEs` : ""}
+                                        style={{ opacity: isAvailable ? 1 : 0.45, cursor: isAvailable ? "pointer" : "not-allowed" }}
+                                    >
+                                        <div
+                                            className="service-header"
+                                            onClick={() => {
+                                                if (!isAvailable) return;
+                                                setSelectedPermissionSetIds(prev => {
+                                                    const next = new Set(prev);
+                                                    next.has(ps._id) ? next.delete(ps._id) : next.add(ps._id);
+                                                    return next;
+                                                });
+                                            }}
+                                        >
+                                            <input type="checkbox" checked={isSelected} readOnly disabled={!isAvailable} />
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                <span className="service-name">{ps.name}</span>
+                                                {ps.description && (
+                                                    <span style={{ fontSize: 12, color: "#64748b" }}>{ps.description}</span>
+                                                )}
+                                            </div>
+                                            {!isAvailable && (
+                                                <span style={{
+                                                    marginLeft: "auto", fontSize: 11, color: "#ef4444",
+                                                    background: "#fef2f2", padding: "2px 8px",
+                                                    borderRadius: 20, border: "1px solid #fecaca", fontWeight: 600
+                                                }}>
+                                                    Out-of-scope
+                                                </span>
+                                            )}
+                                        </div>
+                                        {/* Always show the component permissions of this set */}
+                                        {ps.permissions?.length > 0 && (
+                                            <div className="actions-list components-block">
+                                                <p className="actions-title-premium" style={{ marginBottom: 8 }}>Contains</p>
+                                                <div className="api-badges">
+                                                    {ps.permissions.map(p => (
+                                                        <span
+                                                            key={p}
+                                                            className="api-badge"
+                                                            style={{
+                                                                background: allowedPermissionsWhitelist.has(p) ? "#f0fdf4" : "#fef2f2",
+                                                                color: allowedPermissionsWhitelist.has(p) ? "#16a34a" : "#dc2626",
+                                                                borderColor: allowedPermissionsWhitelist.has(p) ? "#bbf7d0" : "#fecaca",
+                                                            }}
+                                                        >
+                                                            {p}
+                                                        </span>
+                                                    ))}
                                                 </div>
                                             </div>
                                         )}

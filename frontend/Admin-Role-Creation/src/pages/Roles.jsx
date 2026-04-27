@@ -22,6 +22,10 @@ function Roles() {
     const [editSelectedMfes,         setEditSelectedMfes]         = useState(new Set());
     const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set());
 
+    // Permission Sets
+    const [allPermissionSets,        setAllPermissionSets]        = useState([]);
+    const [editSelectedSetIds,       setEditSelectedSetIds]       = useState(new Set());
+
     // ── NEW: ABAC policies state ──────────────────────────────────────────────
     const [editAbacPolicies, setEditAbacPolicies] = useState([]);
     const [activeTab, setActiveTab] = useState("rbac"); // "rbac" | "abac"
@@ -44,6 +48,7 @@ function Roles() {
         setEditSelectedPermissions(new Set(role.permissions || []));
         setEditSelectedMfes(new Set(role.mfeAccess || []));
         setEditAbacPolicies(role.abacPolicies || []);   // ← load existing ABAC policies
+        setEditSelectedSetIds(new Set(role.permissionSetIds || []));
         setActiveTab("rbac");
     };
 
@@ -78,6 +83,10 @@ function Roles() {
 
                 setMicrofrontends(mfes);
                 setMicroservices(Object.values(groupedServices));
+
+                // Fetch Permission Sets
+                const psRes = await axios.get(`${registryUrl}/registry/permission-sets`);
+                setAllPermissionSets(psRes.data || []);
             } catch {
                 setError("Failed to load services. Please try again.");
             }
@@ -165,7 +174,8 @@ function Roles() {
                 mfeAccess:   Array.from(editSelectedMfes),
                 isTemp:      editIsTemp,
                 ...(editIsTemp && { expiresAt: editExpiresAt }),
-                abacPolicies: editAbacPolicies,   // ← send ABAC policies
+                abacPolicies: editAbacPolicies,
+                permissionSetIds: Array.from(editSelectedSetIds),
             });
             closeEditModal();
             getRoles();
@@ -219,6 +229,22 @@ function Roles() {
                                     {role.mfeAccess?.length > 0
                                         ? role.mfeAccess.map(m => <span key={m} className="tag tag-purple">{m}</span>)
                                         : <span className="empty-tag">No MFE access</span>}
+                                </div>
+                            </div>
+
+                            <div className="role-section">
+                                <div className="section-label">Permission Sets</div>
+                                <div className="tag-list">
+                                    {role.permissionSetIds?.length > 0
+                                        ? role.permissionSetIds.map(id => {
+                                            const found = allPermissionSets.find(ps => ps._id === id);
+                                            return (
+                                                <span key={id} className="tag tag-set" title={`ID: ${id}`}>
+                                                    {found ? found.name : id}
+                                                </span>
+                                            );
+                                        })
+                                        : <span className="empty-tag">No permission sets</span>}
                                 </div>
                             </div>
 
@@ -350,6 +376,65 @@ function Roles() {
                                 )}
 
                                 <div className="form-divider" />
+                                <p className="section-title">Permission Sets</p>
+                                <p style={{ fontSize: 12, color: "#9ca3af", margin: "0 0 10px" }}>
+                                    Only sets whose every permission is in the selected MFE whitelist are selectable.
+                                </p>
+                                {microfrontends.length > 0 && editSelectedMfes.size === 0 ? (
+                                    <p className="status-text warning">Select a Microfrontend first.</p>
+                                ) : allPermissionSets.length === 0 ? (
+                                    <p className="status-text">No permission sets registered.</p>
+                                ) : (
+                                    <div className="service-list">
+                                        {allPermissionSets.map(ps => {
+                                            const isAvailable = ps.permissions.every(p => allowedPermissionsWhitelist.has(p));
+                                            const isSelected = editSelectedSetIds.has(ps._id);
+                                            return (
+                                                <div
+                                                    key={ps._id}
+                                                    className={`service-card ${isSelected ? "checked" : ""}`}
+                                                    style={{ opacity: isAvailable ? 1 : 0.45, cursor: isAvailable ? "pointer" : "not-allowed" }}
+                                                    title={!isAvailable ? "Contains permissions outside selected MFEs" : ""}
+                                                >
+                                                    <div className="service-header"
+                                                        onClick={() => {
+                                                            if (!isAvailable) return;
+                                                            setEditSelectedSetIds(prev => {
+                                                                const next = new Set(prev);
+                                                                next.has(ps._id) ? next.delete(ps._id) : next.add(ps._id);
+                                                                return next;
+                                                            });
+                                                        }}
+                                                    >
+                                                        <input type="checkbox" checked={isSelected} readOnly disabled={!isAvailable} />
+                                                        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                                            <span className="service-name">{ps.name}</span>
+                                                            {ps.description && <span style={{ fontSize: 12, color: "#6b7280" }}>{ps.description}</span>}
+                                                        </div>
+                                                        {!isAvailable && <span style={{ marginLeft: "auto", fontSize: 11, color: "#ef4444", background: "#fef2f2", padding: "2px 8px", borderRadius: 20, border: "1px solid #fecaca", fontWeight: 600 }}>Out-of-scope</span>}
+                                                    </div>
+                                                    {ps.permissions?.length > 0 && (
+                                                        <div className="actions-list" style={{ paddingTop: 10, borderTop: "1px dashed #e4e7f0" }}>
+                                                            <p className="actions-title" style={{ marginBottom: 6 }}>Contains</p>
+                                                            <div className="tag-list">
+                                                                {ps.permissions.map(p => (
+                                                                    <span key={p} style={{
+                                                                        padding: "3px 8px", borderRadius: 20, fontSize: 11, fontFamily: "monospace",
+                                                                        background: allowedPermissionsWhitelist.has(p) ? "#f0fdf4" : "#fef2f2",
+                                                                        color: allowedPermissionsWhitelist.has(p) ? "#16a34a" : "#dc2626",
+                                                                        border: `1px solid ${allowedPermissionsWhitelist.has(p) ? "#bbf7d0" : "#fecaca"}`,
+                                                                    }}>{p}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                <div className="form-divider" />
                                 <div className={`permission-item ${editIsTemp ? "checked" : ""}`} onClick={() => setEditIsTemp(!editIsTemp)}>
                                     <input type="checkbox" checked={editIsTemp} readOnly />
                                     <label>Is the Role Temporary?</label>
@@ -412,6 +497,7 @@ const styles = `
 .tag             { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
 .tag-purple      { background: #eef2ff; color: #4f46e5; }
 .tag-green       { background: #f0fdf4; color: #16a34a; }
+.tag-set         { background: #fdf4ff; color: #9333ea; border: 1px solid #e9d5ff; }
 .tag-abac        { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; font-size: 11px; font-family: 'DM Mono', monospace; cursor: default; }
 .empty-tag       { font-size: 12px; color: #d1d5db; }
 
