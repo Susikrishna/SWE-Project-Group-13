@@ -3,7 +3,7 @@ const MfeRegistry = require("../models/MfeRegistry");
 
 const createRole = async (req, res) => {
     try {
-        const { name, description, permissions, mfeAccess, isTemp, expiresAt, abacPolicies } = req.body;
+        const { name, description, permissions, mfeAccess, permissionSets, isTemp, expiresAt, abacPolicies } = req.body;
 
         if (!name) {
             return res.status(400).json({ error: "Role name is required" });
@@ -21,6 +21,9 @@ const createRole = async (req, res) => {
         }
         if (mfeAccess && !Array.isArray(mfeAccess)) {
             return res.status(400).json({ error: "mfeAccess must be an array of strings" });
+        }
+        if (permissionSets && !Array.isArray(permissionSets)) {
+            return res.status(400).json({ error: "permissionSets must be an array of ObjectId strings" });
         }
 
         // ── Validate abacPolicies structure ────────────────────────────────
@@ -80,6 +83,7 @@ const createRole = async (req, res) => {
             description,
             permissions: permissions ?? [],
             mfeAccess: mfeAccess ?? [],
+            permissionSets: permissionSets ?? [],
             isTemp: isTemp ?? false,
             expiresAt: isTemp ? expiresAt : null,
             abacPolicies: abacPolicies ?? [],

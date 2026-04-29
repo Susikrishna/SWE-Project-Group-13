@@ -2,7 +2,7 @@ const Role = require("../models/Role");
 
 const editRole = async (req, res) => {
     try {
-        const { roleId, name, description, permissions, mfeAccess, isTemp, expiresAt, abacPolicies } = req.body;
+        const { roleId, name, description, permissions, mfeAccess, permissionSets, isTemp, expiresAt, abacPolicies } = req.body;
 
         if (!roleId) return res.status(400).json({ error: "roleId is required" });
 
@@ -34,6 +34,7 @@ const editRole = async (req, res) => {
         if (description !== undefined) role.description = description;
         if (permissions !== undefined) role.permissions = permissions;
         if (mfeAccess   !== undefined) role.mfeAccess   = mfeAccess;
+        if (permissionSets !== undefined) role.permissionSets = permissionSets;
         if (isTemp      !== undefined) role.isTemp      = isTemp;
         if (expiresAt   !== undefined) role.expiresAt   = isTemp ? expiresAt : null;
         if (abacPolicies!== undefined) role.abacPolicies= abacPolicies;

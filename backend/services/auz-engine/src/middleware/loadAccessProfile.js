@@ -7,6 +7,7 @@ const {
     mergeAllowedServices,
     validateRoleIds,
 } = require("../utils/accessProfile");
+const { resolvePermissionSets } = require("../utils/resolvePermissionSets");
 
 /**
  * Reads JWT payload, fetches roles from DB, fetches user subject attributes,
@@ -62,6 +63,23 @@ const loadAccessProfile = async (req, res, next) => {
 
         const { mergedPermissions, mergedMfes } = mergeAllowedServices(activeRoles);
 
+        // ── 1b. Resolve Permission Sets → union into effective permissions ────
+        // Collect all unique set IDs across active roles
+        const allSetIds = [
+            ...new Set(
+                activeRoles.flatMap(r => (r.permissionSets || []).map(String))
+            )
+        ];
+        const { additionalPermissions, additionalMfes } = await resolvePermissionSets(allSetIds);
+
+        // Union: direct ∪ from-sets (Set deduplicates)
+        const effectivePermissions = [
+            ...new Set([...mergedPermissions, ...additionalPermissions])
+        ];
+        const effectiveMfes = [
+            ...new Set([...mergedMfes, ...additionalMfes])
+        ];
+
         // ── 2. Load user's subject attributes for ABAC ───────────────────────
         //   userId is stored in the token as tokenPayload.userId
         const userId = tokenPayload.userId || null;
@@ -97,8 +115,8 @@ const loadAccessProfile = async (req, res, next) => {
             roleIds,
             roles: activeRoles,
             roleSummaries: activeRoles.map(buildRoleSummary),
-            mergedPermissions,
-            mergedMfes,
+            mergedPermissions: effectivePermissions,
+            mergedMfes: effectiveMfes,
             subjectAttributes,   // ← available to checkAccess & abacEngine
         };
 
