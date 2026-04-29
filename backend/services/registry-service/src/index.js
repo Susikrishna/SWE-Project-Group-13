@@ -13,34 +13,38 @@ const app = express();
 app.use(cors()); // Allow cross-origin requests
 app.use(express.json()); // Parse incoming JSON payloads
 
-// --- Database Connection ---
-connectDB();
-
-// --- Route Mounting ---
-// Mount API Registry routes.
-// Frontend calls: POST /registry/services/bulk
-app.use("/registry/services", apiRoutes);
-
-// Mount MFE Registry routes.
-// Frontend calls: POST /registry/mfes
-app.use("/registry/mfes", mfeRoutes);
-
-// Mount Permission Set routes.
-// Frontend calls: GET /registry/permission-sets
-app.use("/registry/permission-sets", permissionSetRoutes);
-
-// --- Health Check ---
-app.get("/", (req, res) => {
-  res.status(200).json({
-    service: "Registry Service",
-    status: "Running 🚀",
-    timestamp: new Date().toISOString()
-  });
-});
-
-// --- Server Initialization ---
 const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, () => {
-  console.log(`Registry Service is running on port ${PORT}`);
+async function bootstrap() {
+  await connectDB();
+
+  // --- Route Mounting ---
+  // Mount API Registry routes.
+  // Frontend calls: POST /registry/services/bulk
+  app.use("/registry/services", apiRoutes);
+
+  // Mount MFE Registry routes.
+  // Frontend calls: POST /registry/mfes
+  app.use("/registry/mfes", mfeRoutes);
+
+  // Mount Permission Set routes.
+  app.use("/registry/permission-sets", permissionSetRoutes);
+
+  // --- Health Check ---
+  app.get("/", (req, res) => {
+    res.status(200).json({
+      service: "Registry Service",
+      status: "Running 🚀",
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  app.listen(PORT, () => {
+    console.log(`Registry Service is running on port ${PORT}`);
+  });
+}
+
+bootstrap().catch((err) => {
+  console.error("Registry bootstrap error:", err.message);
+  process.exit(1);
 });

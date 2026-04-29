@@ -36,9 +36,9 @@ const roleSchema = new mongoose.Schema(
 
         mfeAccess: { type: [String], default: [] },
 
-        // IDs of PermissionSets (from registry-service) linked to this role.
-        // Effective permissions = permissions ∪ (∑ linked set permissions).
-        permissionSetIds: { type: [String], default: [] },
+        // References to PermissionSet documents in registry-service DB.
+        // Effective permissions = union(direct permissions, apis from all attached sets).
+        permissionSets: [{ type: mongoose.Schema.Types.ObjectId, default: [] }],
 
         isTemp: { type: Boolean, default: false },
         expiresAt: {

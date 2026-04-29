@@ -1,118 +1,178 @@
 const PermissionSet = require("../models/permissionSet.model");
+const MfeRegistry = require("../models/mfeRegistry.model");
+const ApiRegistry = require("../models/apiRegistry.model");
 
-/**
- * Create a new Permission Set.
- */
+const normalizeIdList = (value) => {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter(Boolean).map((id) => String(id).trim()))];
+};
+
+const buildAllowedPermissionMap = (mfes) => {
+  const map = new Map();
+
+  for (const mfe of mfes) {
+    if (!mfe) continue;
+    const mfeKey = String(mfe._id);
+    const allowed = new Set();
+
+    (mfe.allowedPermissions || []).forEach((key) => {
+      if (key) allowed.add(String(key));
+    });
+
+    (mfe.components || []).forEach((component) => {
+      (component.allowedPermissions || []).forEach((key) => {
+        if (key) allowed.add(String(key));
+      });
+    });
+
+    map.set(mfeKey, allowed);
+  }
+
+  return map;
+};
+
+const validateCoupling = async ({ mfeIds, apiIds }) => {
+  if (apiIds.length > 0 && mfeIds.length === 0) {
+    return {
+      ok: false,
+      message: "Each permission set API needs at least one corresponding MFE.",
+    };
+  }
+
+  const [mfes, apis] = await Promise.all([
+    MfeRegistry.find({ _id: { $in: mfeIds } }),
+    ApiRegistry.find({ _id: { $in: apiIds } }),
+  ]);
+
+  if (mfes.length !== mfeIds.length) {
+    return {
+      ok: false,
+      message: "One or more selected MFEs were not found in the registry.",
+    };
+  }
+
+  if (apis.length !== apiIds.length) {
+    return {
+      ok: false,
+      message: "One or more selected APIs were not found in the registry.",
+    };
+  }
+
+  const allowedByMfe = buildAllowedPermissionMap(mfes);
+  const mfePermissionUniverse = new Set();
+  for (const allowed of allowedByMfe.values()) {
+    allowed.forEach((key) => mfePermissionUniverse.add(key));
+  }
+
+  const invalidApis = apis.filter((api) => !mfePermissionUniverse.has(api.permissionKey));
+  if (invalidApis.length > 0) {
+    return {
+      ok: false,
+      message: `These APIs are not covered by any selected MFE: ${invalidApis.map((api) => api.permissionKey).join(", ")}`,
+    };
+  }
+
+  return { ok: true, mfes, apis };
+};
+
+const populatePermissionSet = (doc) =>
+  doc.populate([
+    { path: "mfes", select: "feature name route module allowedPermissions components isActive" },
+    { path: "apis", select: "service basePath route method resource action permissionKey isPublic isActive" },
+  ]);
+
 const createPermissionSet = async (req, res) => {
   try {
-    const { name, description, permissions, isActive } = req.body;
+    let { name, description, mfes, apis, isActive } = req.body;
 
-    if (!name) {
-      return res.status(400).json({ error: "Permission Set name is required" });
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: "Permission set name is required" });
     }
 
-    if (permissions && !Array.isArray(permissions)) {
-      return res.status(400).json({ error: "permissions must be an array of strings" });
+    const mfeIds = normalizeIdList(mfes);
+    const apiIds = normalizeIdList(apis);
+
+    const coupling = await validateCoupling({ mfeIds, apiIds });
+    if (!coupling.ok) {
+      return res.status(400).json({ error: coupling.message });
     }
 
-    const set = await PermissionSet.create({
-      name: name.trim(),
-      description: description?.trim(),
-      permissions: permissions ?? [],
+    const permissionSet = await PermissionSet.create({
+      name: String(name).trim(),
+      description: description?.trim() || "",
+      mfes: mfeIds,
+      apis: apiIds,
       isActive: isActive ?? true,
     });
 
-    res.status(201).json(set);
+    const populated = await populatePermissionSet(permissionSet);
+    res.status(201).json(populated);
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ error: `A Permission Set named "${req.body.name}" already exists` });
+      return res.status(409).json({ error: `Permission set "${req.body.name}" already exists` });
     }
     res.status(500).json({ error: err.message });
   }
 };
 
-/**
- * Retrieve all Permission Sets.
- */
 const getPermissionSets = async (req, res) => {
   try {
-    const sets = await PermissionSet.find().sort({ createdAt: -1 });
-    res.json(sets);
+    // Optional ?ids= comma-separated filter (used by auz-engine for batch resolution)
+    const { ids } = req.query;
+    const filter = ids
+      ? { _id: { $in: ids.split(",").map((s) => s.trim()).filter(Boolean) } }
+      : {};
+
+    const permissionSets = await PermissionSet.find(filter).sort({ createdAt: -1 });
+    const populated = await Promise.all(permissionSets.map((set) => populatePermissionSet(set)));
+    res.json(populated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-/**
- * Retrieve a single Permission Set by ID.
- */
-const getPermissionSetById = async (req, res) => {
-  try {
-    const set = await PermissionSet.findById(req.params.id);
-    if (!set) return res.status(404).json({ error: "Permission Set not found" });
-    res.json(set);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-/**
- * Update a Permission Set (name, description, permissions, isActive).
- */
 const updatePermissionSet = async (req, res) => {
   try {
-    const { name, description, permissions, isActive } = req.body;
-    const update = {};
+    const { id } = req.params;
+    let { name, description, mfes, apis, isActive } = req.body;
 
-    if (name !== undefined) update.name = name.trim();
-    if (description !== undefined) update.description = description?.trim();
-    if (permissions !== undefined) {
-      if (!Array.isArray(permissions)) {
-        return res.status(400).json({ error: "permissions must be an array of strings" });
-      }
-      update.permissions = permissions;
+    const permissionSet = await PermissionSet.findById(id);
+    if (!permissionSet) {
+      return res.status(404).json({ error: "Permission set not found" });
     }
-    if (isActive !== undefined) update.isActive = isActive;
 
-    const set = await PermissionSet.findByIdAndUpdate(req.params.id, update, { new: true });
-    if (!set) return res.status(404).json({ error: "Permission Set not found" });
+    const nextMfeIds = mfes !== undefined ? normalizeIdList(mfes) : permissionSet.mfes.map(String);
+    const nextApiIds = apis !== undefined ? normalizeIdList(apis) : permissionSet.apis.map(String);
 
-    res.json(set);
+    const coupling = await validateCoupling({ mfeIds: nextMfeIds, apiIds: nextApiIds });
+    if (!coupling.ok) {
+      return res.status(400).json({ error: coupling.message });
+    }
+
+    if (name !== undefined) permissionSet.name = String(name).trim();
+    if (description !== undefined) permissionSet.description = description?.trim() || "";
+    if (mfes !== undefined) permissionSet.mfes = nextMfeIds;
+    if (apis !== undefined) permissionSet.apis = nextApiIds;
+    if (isActive !== undefined) permissionSet.isActive = isActive;
+
+    await permissionSet.save();
+    const populated = await populatePermissionSet(permissionSet);
+    res.json(populated);
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ error: `A Permission Set with that name already exists` });
+      return res.status(409).json({ error: `Permission set "${req.body.name}" already exists` });
     }
     res.status(500).json({ error: err.message });
   }
 };
 
-/**
- * Delete a Permission Set by ID.
- */
 const deletePermissionSet = async (req, res) => {
   try {
-    const set = await PermissionSet.findByIdAndDelete(req.params.id);
-    if (!set) return res.status(404).json({ error: "Permission Set not found" });
-    res.json({ message: "Permission Set deleted", id: req.params.id });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
-
-/**
- * Resolve multiple Permission Set IDs → merged permissions array.
- * Used internally by role-service for cross-service validation.
- * POST /registry/permission-sets/resolve  { ids: [...] }
- */
-const resolvePermissionSets = async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids)) {
-      return res.status(400).json({ error: "ids must be an array of Permission Set IDs" });
+    const deleted = await PermissionSet.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: "Permission set not found" });
     }
-    const sets = await PermissionSet.find({ _id: { $in: ids } });
-    const merged = [...new Set(sets.flatMap((s) => s.permissions))];
-    res.json({ permissions: merged, sets });
+    res.json({ message: "Permission set deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -121,8 +181,6 @@ const resolvePermissionSets = async (req, res) => {
 module.exports = {
   createPermissionSet,
   getPermissionSets,
-  getPermissionSetById,
   updatePermissionSet,
   deletePermissionSet,
-  resolvePermissionSets,
 };

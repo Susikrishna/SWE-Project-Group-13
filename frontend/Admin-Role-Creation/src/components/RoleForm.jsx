@@ -9,16 +9,15 @@ function RoleForm() {
     
     const [microfrontends, setMicrofrontends] = useState([]);
     const [microservices, setMicroservices] = useState([]);
+    const [permissionSets, setPermissionSets] = useState([]);  // all sets from registry
+    const [selectedSetIds, setSelectedSetIds] = useState(new Set()); // attached to this role
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // State for flattened permissions
     const [selectedPermissions, setSelectedPermissions] = useState(new Set());
     const [selectedMfes, setSelectedMfes] = useState(new Set());
     const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set()); // Whitelist for hard restriction
-
-    // Permission Sets state
-    const [allPermissionSets, setAllPermissionSets] = useState([]);
-    const [selectedPermissionSetIds, setSelectedPermissionSetIds] = useState(new Set());
 
     useEffect(() => {
         const fetchRegistries = async () => {
@@ -60,9 +59,9 @@ function RoleForm() {
                 setMicrofrontends(mfes);
                 setMicroservices(Object.values(groupedServices));
 
-                // Fetch Permission Sets
-                const psRes = await axios.get(`${registryUrl}/registry/permission-sets`);
-                setAllPermissionSets(psRes.data || []);
+                // Fetch permission sets from registry
+                const setsRes = await axios.get(`${registryUrl}/registry/permission-sets`);
+                setPermissionSets(Array.isArray(setsRes.data) ? setsRes.data : []);
             } catch (err) {
                 setError("Failed to load services. Please try again.");
             } finally {
@@ -194,11 +193,30 @@ function RoleForm() {
         });
     };
     
+    // ── Derived: inherited permissions/MFEs from selected sets ─────────────
+    const inheritedPermissions = new Set(
+        Array.from(selectedSetIds).flatMap(id => {
+            const set = permissionSets.find(s => s._id === id);
+            return set ? (set.apis || []).map(a => a.permissionKey || a) : [];
+        })
+    );
+    const inheritedMfes = new Set(
+        Array.from(selectedSetIds).flatMap(id => {
+            const set = permissionSets.find(s => s._id === id);
+            if (!set) return [];
+            return (set.mfes || []).flatMap(m => {
+                const comps = m.components || [];
+                if (comps.length === 0) return [m.feature || m];
+                return comps.filter(c => c.route).map(c => `${m.feature}::${c.route}`);
+            });
+        })
+    );
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (selectedPermissions.size === 0 && selectedMfes.size === 0 && selectedPermissionSetIds.size === 0) {
-            alert("Please select at least one service, permission set, or microfrontend.");
+        if (selectedPermissions.size === 0 && selectedMfes.size === 0 && selectedSetIds.size === 0) {
+            alert("Please select at least one microfrontend, API permission, or permission set.");
             return;
         }
 
@@ -209,7 +227,7 @@ function RoleForm() {
             name: roleName,
             permissions: Array.from(selectedPermissions),
             mfeAccess: Array.from(activeMfes),
-            permissionSetIds: Array.from(selectedPermissionSetIds),
+            permissionSets: Array.from(selectedSetIds),
             isTemp,
             ...(isTemp && { expiresAt }),
         };
@@ -225,7 +243,6 @@ function RoleForm() {
             setExpiresAt("");
             setSelectedPermissions(new Set());
             setSelectedMfes(new Set());
-            setSelectedPermissionSetIds(new Set());
         } catch (err) {
             alert(err.response?.data?.error || "Failed to create role.");
         }
@@ -399,86 +416,125 @@ function RoleForm() {
                     {/* ── Permission Sets Section ── */}
                     <p className="section-title">Permission Sets</p>
                     <p className="section-subtitle">
-                        Pre-defined groups of permissions. Only sets whose every permission is
-                        covered by the MFEs you selected above are available.
-                        {selectedMfes.size === 0 && " Select at least one MFE first."}
+                        Attach reusable sets of MFEs + APIs. Sets are atomic — attach or detach the whole set.
+                        Direct permissions above always take priority.
                     </p>
-                    {selectedMfes.size === 0 ? (
-                        <p className="status-text warning">Select a Microfrontend above to unlock matching Permission Sets.</p>
+                    {loading ? (
+                        <p className="status-text loading-pulse">Loading sets…</p>
+                    ) : permissionSets.length === 0 ? (
+                        <p className="status-text">No permission sets found. Create one in the Registry first.</p>
                     ) : (
                         <div className="service-list">
-                            {allPermissionSets.length === 0 && (
-                                <p className="status-text">No permission sets registered yet.</p>
-                            )}
-                            {allPermissionSets.map((ps) => {
-                                // A set is available only if ALL its permissions are in the MFE whitelist
-                                const isAvailable = ps.permissions.every(p => allowedPermissionsWhitelist.has(p));
-                                const isSelected = selectedPermissionSetIds.has(ps._id);
-                                const blockedPerms = ps.permissions.filter(p => !allowedPermissionsWhitelist.has(p));
-
+                            {permissionSets.map(set => {
+                                const attached = selectedSetIds.has(set._id);
                                 return (
                                     <div
-                                        key={ps._id}
-                                        className={`service-card ${isSelected ? "checked" : ""} ${!isAvailable ? "ps-blocked" : ""}`}
-                                        title={!isAvailable ? `Blocked: ${blockedPerms.join(", ")} not in selected MFEs` : ""}
-                                        style={{ opacity: isAvailable ? 1 : 0.45, cursor: isAvailable ? "pointer" : "not-allowed" }}
+                                        key={set._id}
+                                        className={`service-card ${attached ? "checked" : ""}`}
+                                        style={{ cursor: "pointer" }}
+                                        onClick={() => setSelectedSetIds(prev => {
+                                            const next = new Set(prev);
+                                            attached ? next.delete(set._id) : next.add(set._id);
+                                            return next;
+                                        })}
                                     >
-                                        <div
-                                            className="service-header"
-                                            onClick={() => {
-                                                if (!isAvailable) return;
-                                                setSelectedPermissionSetIds(prev => {
-                                                    const next = new Set(prev);
-                                                    next.has(ps._id) ? next.delete(ps._id) : next.add(ps._id);
-                                                    return next;
-                                                });
-                                            }}
-                                        >
-                                            <input type="checkbox" checked={isSelected} readOnly disabled={!isAvailable} />
-                                            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                                <span className="service-name">{ps.name}</span>
-                                                {ps.description && (
-                                                    <span style={{ fontSize: 12, color: "#64748b" }}>{ps.description}</span>
+                                        <div className="service-header" style={{ pointerEvents: "none" }}>
+                                            <input type="checkbox" checked={attached} readOnly />
+                                            <div style={{ flex: 1 }}>
+                                                <span className="service-name">{set.name}</span>
+                                                {set.description && (
+                                                    <span style={{ marginLeft: 8, fontSize: 12, color: "#94a3b8" }}>{set.description}</span>
                                                 )}
                                             </div>
-                                            {!isAvailable && (
-                                                <span style={{
-                                                    marginLeft: "auto", fontSize: 11, color: "#ef4444",
-                                                    background: "#fef2f2", padding: "2px 8px",
-                                                    borderRadius: 20, border: "1px solid #fecaca", fontWeight: 600
-                                                }}>
-                                                    Out-of-scope
-                                                </span>
-                                            )}
-                                        </div>
-                                        {/* Always show the component permissions of this set */}
-                                        {ps.permissions?.length > 0 && (
-                                            <div className="actions-list components-block">
-                                                <p className="actions-title-premium" style={{ marginBottom: 8 }}>Contains</p>
-                                                <div className="api-badges">
-                                                    {ps.permissions.map(p => (
-                                                        <span
-                                                            key={p}
-                                                            className="api-badge"
-                                                            style={{
-                                                                background: allowedPermissionsWhitelist.has(p) ? "#f0fdf4" : "#fef2f2",
-                                                                color: allowedPermissionsWhitelist.has(p) ? "#16a34a" : "#dc2626",
-                                                                borderColor: allowedPermissionsWhitelist.has(p) ? "#bbf7d0" : "#fecaca",
-                                                            }}
-                                                        >
-                                                            {p}
-                                                        </span>
-                                                    ))}
-                                                </div>
+                                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                                {(set.mfes || []).map(m => (
+                                                    <span key={m._id} style={{ background: "#f5f3ff", color: "#7c3aed", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
+                                                        {m.name || m.feature}
+                                                    </span>
+                                                ))}
+                                                {(set.apis || []).slice(0, 3).map(a => (
+                                                    <span key={a._id} style={{ background: "#e0f2fe", color: "#0369a1", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }}>
+                                                        {a.permissionKey}
+                                                    </span>
+                                                ))}
+                                                {(set.apis || []).length > 3 && (
+                                                    <span style={{ background: "#f1f5f9", color: "#64748b", borderRadius: 10, padding: "2px 8px", fontSize: 11 }}>
+                                                        +{set.apis.length - 3} more
+                                                    </span>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 );
                             })}
                         </div>
                     )}
 
+                    {/* ── Effective Permissions Summary ── */}
+                    {(selectedPermissions.size > 0 || selectedMfes.size > 0 || selectedSetIds.size > 0) && (
+                        <>
+                            <div className="form-divider" />
+                            <p className="section-title" style={{ color: "#0f172a" }}>Effective Permissions Summary</p>
+                            <p className="section-subtitle">
+                                The actual permissions this role will have at runtime.
+                                <span style={{ color: "#4f46e5", fontWeight: 600 }}> Blue</span> = direct, 
+                                <span style={{ color: "#f97316", fontWeight: 600 }}> Orange</span> = from a Permission Set.
+                            </p>
+                            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "18px 20px" }}>
+                                {/* API Permissions */}
+                                <div style={{ marginBottom: 14 }}>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>
+                                        API Permissions
+                                    </div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                        {Array.from(selectedPermissions).map(p => (
+                                            <span key={p} style={{ background: "#eef2ff", color: "#4f46e5", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 }}>
+                                                {p}
+                                            </span>
+                                        ))}
+                                        {Array.from(inheritedPermissions)
+                                            .filter(p => !selectedPermissions.has(p))
+                                            .map(p => (
+                                                <span key={p} style={{ background: "#fff7ed", color: "#f97316", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, border: "1px dashed #fed7aa" }}>
+                                                    {p}
+                                                </span>
+                                            ))
+                                        }
+                                        {selectedPermissions.size === 0 && inheritedPermissions.size === 0 && (
+                                            <span style={{ color: "#94a3b8", fontSize: 13 }}>None</span>
+                                        )}
+                                    </div>
+                                </div>
+                                {/* MFE Access */}
+                                <div>
+                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>
+                                        MFE Access
+                                    </div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                        {Array.from(selectedMfes).map(m => (
+                                            <span key={m} style={{ background: "#eef2ff", color: "#4f46e5", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>
+                                                {m}
+                                            </span>
+                                        ))}
+                                        {Array.from(inheritedMfes)
+                                            .filter(m => !selectedMfes.has(m))
+                                            .map(m => (
+                                                <span key={m} style={{ background: "#fff7ed", color: "#f97316", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 500, border: "1px dashed #fed7aa" }}>
+                                                    {m}
+                                                </span>
+                                            ))
+                                        }
+                                        {selectedMfes.size === 0 && inheritedMfes.size === 0 && (
+                                            <span style={{ color: "#94a3b8", fontSize: 13 }}>None</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
+
                     <div className="form-divider" />
+
 
                     <label
                         className={`permission-item ${isTemp ? "checked" : ""}`}

@@ -6,6 +6,5 @@ export const ENDPOINTS = {
     MFES: '/registry/mfes',
     MFES_SEARCH: '/registry/mfes/search',
     PERMISSION_SETS: '/registry/permission-sets',
-    PERMISSION_SETS_RESOLVE: '/registry/permission-sets/resolve',
   }
 };

@@ -28,6 +28,12 @@ const roleSchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        // References to PermissionSet docs in registry-service.
+        // Used by loadAccessProfile to compute the effective permission union.
+        permissionSets: {
+            type: [mongoose.Schema.Types.Mixed],
+            default: [],
+        },
         isTemp: {
             type: Boolean,
             default: false,
