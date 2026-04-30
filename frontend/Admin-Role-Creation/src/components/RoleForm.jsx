@@ -1,69 +1,27 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 const serverUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:3002';
-const registryUrl = import.meta.env.VITE_REGISTRY_URL || 'http://localhost:3001';
+const registryUrl = import.meta.env.VITE_REGISTRY_URL || 'http://localhost:5001';
+
 function RoleForm() {
     const [roleName, setRoleName] = useState("");
     const [isTemp, setIsTemp] = useState(false);
     const [expiresAt, setExpiresAt] = useState("");
     
-    const [microfrontends, setMicrofrontends] = useState([]);
-    const [microservices, setMicroservices] = useState([]);
     const [permissionSets, setPermissionSets] = useState([]);  // all sets from registry
     const [selectedSetIds, setSelectedSetIds] = useState(new Set()); // attached to this role
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // State for flattened permissions
-    const [selectedPermissions, setSelectedPermissions] = useState(new Set());
-    const [selectedMfes, setSelectedMfes] = useState(new Set());
-    const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set()); // Whitelist for hard restriction
+    const [showSummaryDetails, setShowSummaryDetails] = useState(false);
 
     useEffect(() => {
         const fetchRegistries = async () => {
             try {
-                // Fetch from the updated Registry Service on Port 3001
-                const [mfeRes, svcRes] = await Promise.all([
-                    axios.get(`${registryUrl}/registry/mfes`),
-                    axios.get(`${registryUrl}/registry/services`)
-                ]);
-                
-                const mfes = mfeRes.data.map(m => ({
-                    id: m.feature,
-                    label: m.name,
-                    allowedPermissions: m.allowedPermissions || [],
-                    components: (m.components || []).map(c => ({
-                        name: c.name,
-                        route: c.route,
-                        componentKey: `${m.feature}::${c.route}`,
-                        allowedPermissions: c.allowedPermissions || []
-                    }))
-                }));
-                
-                const groupedServices = {};
-                svcRes.data.forEach(api => {
-                    if (!groupedServices[api.service]) {
-                        groupedServices[api.service] = {
-                            id: api.service,
-                            label: api.service.toUpperCase(),
-                            permissions: []
-                        };
-                    }
-                    groupedServices[api.service].permissions.push({
-                        resource: api.resource,
-                        action: api.action,
-                        permissionKey: api.permissionKey
-                    });
-                });
-                
-                setMicrofrontends(mfes);
-                setMicroservices(Object.values(groupedServices));
-
                 // Fetch permission sets from registry
                 const setsRes = await axios.get(`${registryUrl}/registry/permission-sets`);
                 setPermissionSets(Array.isArray(setsRes.data) ? setsRes.data : []);
             } catch (err) {
-                setError("Failed to load services. Please try again.");
+                setError("Failed to load permission sets. Please try again.");
             } finally {
                 setLoading(false);
             }
@@ -72,142 +30,40 @@ function RoleForm() {
         fetchRegistries();
     }, []);
     
-    // Update whitelist whenever MFEs change
-    useEffect(() => {
-        const activeFeatures = new Set();
-        selectedMfes.forEach(key => activeFeatures.add(key.split("::")[0]));
-        
-        const newWhitelist = new Set();
-        activeFeatures.forEach(fid => {
-            const mfe = microfrontends.find(m => m.id === fid);
-            if (mfe) mfe.allowedPermissions.forEach(p => newWhitelist.add(p));
-        });
-
-        // Add permissions from specifically selected components
-        selectedMfes.forEach(key => {
-            if (key.includes("::")) {
-                const fid = key.split("::")[0];
-                const mfe = microfrontends.find(m => m.id === fid);
-                if (mfe) {
-                    const comp = mfe.components.find(c => c.componentKey === key);
-                    if (comp) comp.allowedPermissions.forEach(p => newWhitelist.add(p));
-                }
-            }
-        });
-
-        setAllowedPermissionsWhitelist(newWhitelist);
-
-        // Hard Restriction: Remove any selected permissions that are no longer in the whitelist
-        setSelectedPermissions(prev => {
-            const next = new Set();
-            prev.forEach(p => {
-                if (newWhitelist.has(p)) next.add(p);
-            });
-            return next;
-        });
-    }, [selectedMfes, microfrontends]);
-
-    const toggleMfe = (mfeId, components) => {
-        const hasAny = components.length > 0 
-            ? components.some(c => selectedMfes.has(c.componentKey))
-            : selectedMfes.has(mfeId);
-            
-        const mfe = microfrontends.find(m => m.id === mfeId);
-
-        setSelectedMfes(prev => {
-            const next = new Set(prev);
-            if (hasAny) {
-                if (components.length > 0) {
-                    components.forEach(c => next.delete(c.componentKey));
-                } else {
-                    next.delete(mfeId);
-                }
-            } else {
-                if (components.length > 0) {
-                    components.forEach(c => next.add(c.componentKey));
-                } else {
-                    next.add(mfeId);
-                }
-                // Default Assignment: Add all related permissions when MFE is selected
-                if (mfe) {
-                    setSelectedPermissions(pPrev => {
-                        const pNext = new Set(pPrev);
-                        mfe.allowedPermissions.forEach(p => pNext.add(p));
-                        if(components.length > 0) {
-                            components.forEach(c => (c.allowedPermissions || []).forEach(p => pNext.add(p)));
-                        }
-                        return pNext;
-                    });
-                }
-            }
-            return next;
-        });
-    };
-    
-    const toggleComponent = (componentKey) => {
-        const mfeId = componentKey.split("::")[0];
-        const mfe = microfrontends.find(m => m.id === mfeId);
-        
-        setSelectedMfes(prev => {
-            const next = new Set(prev);
-            const isAdding = !next.has(componentKey);
-            if (next.has(componentKey)) next.delete(componentKey);
-            else next.add(componentKey);
-
-            // Auto-select permissions specific to this component when added
-            if (isAdding) {
-                const compToSelect = mfe?.components?.find(c => c.componentKey === componentKey);
-                if (compToSelect || mfe) {
-                    setSelectedPermissions(pPrev => {
-                        const pNext = new Set(pPrev);
-                        if (mfe) mfe.allowedPermissions.forEach(p => pNext.add(p));
-                        if (compToSelect) compToSelect.allowedPermissions.forEach(p => pNext.add(p));
-                        return pNext;
-                    });
-                }
-            }
-            return next;
-        });
-    };
-
-    const toggleServiceExpand = (serviceId, permissions) => {
-        const hasAny = permissions.some(p => selectedPermissions.has(p.permissionKey));
-
-        setSelectedPermissions(prev => {
-            const next = new Set(prev);
-            if (hasAny) {
-                permissions.forEach(p => next.delete(p.permissionKey));
-            } else {
-                permissions.forEach(p => next.add(p.permissionKey));
-            }
-            return next;
-        });
-    };
-
-    const togglePermission = (permissionKey) => {
-        setSelectedPermissions(prev => {
-            const next = new Set(prev);
-            if (next.has(permissionKey)) next.delete(permissionKey);
-            else next.add(permissionKey);
-            return next;
-        });
-    };
-    
     // ── Derived: inherited permissions/MFEs from selected sets ─────────────
+    // Dynamically derive from the populated mfes.mfeId structure — no static apis array.
     const inheritedPermissions = new Set(
         Array.from(selectedSetIds).flatMap(id => {
             const set = permissionSets.find(s => s._id === id);
-            return set ? (set.apis || []).map(a => a.permissionKey || a) : [];
+            if (!set) return [];
+            return (set.mfes || []).flatMap(entry => {
+                const mfe = entry.mfeId || {};
+                const selectedComps = new Set(entry.components || []);
+                const hasFilter = selectedComps.size > 0;
+                const rootPerms = mfe.allowedPermissions || [];
+                if (!hasFilter) {
+                    // All component permissions as well
+                    const compPerms = (mfe.components || []).flatMap(c => c.allowedPermissions || []);
+                    return [...rootPerms, ...compPerms];
+                }
+                const compPerms = (mfe.components || [])
+                    .filter(c => selectedComps.has(c.route))
+                    .flatMap(c => c.allowedPermissions || []);
+                return [...rootPerms, ...compPerms];
+            });
         })
     );
     const inheritedMfes = new Set(
         Array.from(selectedSetIds).flatMap(id => {
             const set = permissionSets.find(s => s._id === id);
             if (!set) return [];
-            return (set.mfes || []).flatMap(m => {
-                const comps = m.components || [];
-                if (comps.length === 0) return [m.feature || m];
-                return comps.filter(c => c.route).map(c => `${m.feature}::${c.route}`);
+            return (set.mfes || []).flatMap(entry => {
+                const mfe = entry.mfeId || {};
+                const feature = mfe.feature;
+                if (!feature) return [];
+                const selectedComps = entry.components || [];
+                if (selectedComps.length === 0) return [feature]; // whole MFE
+                return selectedComps.map(route => `${feature}::${route}`);
             });
         })
     );
@@ -215,18 +71,15 @@ function RoleForm() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (selectedPermissions.size === 0 && selectedMfes.size === 0 && selectedSetIds.size === 0) {
-            alert("Please select at least one microfrontend, API permission, or permission set.");
+        if (selectedSetIds.size === 0) {
+            alert("Please select at least one permission set.");
             return;
         }
 
-        const activeMfes = new Set();
-        selectedMfes.forEach(key => activeMfes.add(key.split("::")[0]));
-
         const roleData = {
             name: roleName,
-            permissions: Array.from(selectedPermissions),
-            mfeAccess: Array.from(activeMfes),
+            permissions: [], // Ignored by auz-engine, sent for legacy compatibility
+            mfeAccess: [],   // Ignored by auz-engine, sent for legacy compatibility
             permissionSets: Array.from(selectedSetIds),
             isTemp,
             ...(isTemp && { expiresAt }),
@@ -241,8 +94,7 @@ function RoleForm() {
             setRoleName("");
             setIsTemp(false);
             setExpiresAt("");
-            setSelectedPermissions(new Set());
-            setSelectedMfes(new Set());
+            setSelectedSetIds(new Set());
         } catch (err) {
             alert(err.response?.data?.error || "Failed to create role.");
         }
@@ -270,157 +122,16 @@ function RoleForm() {
                     </div>
                     
                     <div className="form-divider" />
-                    <p className="section-title">Microfrontend Access</p>
-                    {loading ? (
-                        <p className="status-text">Loading services...</p>
-                    ) : error ? (
-                        <p className="status-text error">{error}</p>
-                    ) : microfrontends.length === 0 ? (
-                        <p className="status-text">No microfrontends registered.</p>
-                    ) : (
-                        <div className="service-list">
-                            {microfrontends.map((item) => {
-                                const hasAny = item.components.length > 0 
-                                    ? item.components.some(c => selectedMfes.has(c.componentKey))
-                                    : selectedMfes.has(item.id);
-                                    
-                                return (
-                                    <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                        <div
-                                            className="service-header"
-                                            onClick={() => toggleMfe(item.id, item.components)}
-                                        >
-                                            <input type="checkbox" checked={hasAny} readOnly />
-                                            <span className="service-name">{item.label}</span>
-                                        </div>
-                                        {hasAny && item.allowedPermissions?.length > 0 && (
-                                            <div className="actions-list root-permissions-block">
-                                                <div className="section-badge-header">
-                                                    <span className="badge-icon">⚡</span>
-                                                    <p className="actions-title-premium">Root Permissions (Always granted)</p>
-                                                </div>
-                                                <div className="api-badges">
-                                                    {item.allowedPermissions.map((p) => (
-                                                        <span key={p} className="api-badge root-badge">{p}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        {hasAny && item.components.length > 0 && (
-                                            <div className={`actions-list ${item.allowedPermissions?.length > 0 ? "components-block-continued" : "components-block"}`}>
-                                                <p className="actions-title-premium" style={{ marginBottom: "12px" }}>Components</p>
-                                                <div className="actions-grid">
-                                                    {item.components.map((comp) => {
-                                                        const isSelected = selectedMfes.has(comp.componentKey);
-                                                        return (
-                                                            <label
-                                                                key={comp.componentKey}
-                                                                className={`action-chip ${isSelected ? "selected" : ""}`}
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    toggleComponent(comp.componentKey);
-                                                                }}
-                                                            >
-                                                                <div className="chip-header">
-                                                                    <input type="checkbox" checked={isSelected} readOnly />
-                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                        <span className="action-name">{comp.name}</span>
-                                                                        <span className="action-desc">{comp.route}</span>
-                                                                    </div>
-                                                                </div>
-                                                                {comp.allowedPermissions?.length > 0 && (
-                                                                    <div className="api-badge-container">
-                                                                        <span className="api-badge-label">Required APIs</span>
-                                                                        <div className="api-badges">
-                                                                            {comp.allowedPermissions.map(p => (
-                                                                                <span key={p} className="api-badge">{p}</span>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </label>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <div className="form-divider" />
-                    <p className="section-title">Microservice Access</p>
-                    <p className="section-subtitle">Filtered to only show backend APIs required by your Microfrontend choices above.</p>
-                    {loading ? (
-                        <p className="status-text loading-pulse">Loading services...</p>
-                    ) : error ? (
-                        <p className="status-text error">{error}</p>
-                    ) : selectedMfes.size === 0 ? (
-                        <p className="status-text warning">Select a Microfrontend above to enable related APIs.</p>
-                    ) : (
-                        <div className="service-list">
-                            {microservices.map((item) => {
-                                // Filter permissions to ONLY those in the whitelist
-                                const filteredPermissions = item.permissions.filter(p => allowedPermissionsWhitelist.has(p.permissionKey));
-                                
-                                if (filteredPermissions.length === 0) return null;
-
-                                const hasAny = filteredPermissions.some(p => selectedPermissions.has(p.permissionKey));
-                                return (
-                                    <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                        <div
-                                            className="service-header"
-                                            onClick={() => toggleServiceExpand(item.id, filteredPermissions)}
-                                        >
-                                            <input type="checkbox" checked={hasAny} readOnly />
-                                            <span className="service-name">{item.label}</span>
-                                        </div>
-                                        {hasAny && (
-                                            <div className="actions-list components-block">
-                                                <p className="actions-title-premium" style={{ marginBottom: "12px" }}>Resource List</p>
-                                                <div className="actions-grid">
-                                                    {filteredPermissions.map((perm) => {
-                                                        const isSelected = selectedPermissions.has(perm.permissionKey);
-                                                        return (
-                                                            <label
-                                                                key={perm.permissionKey}
-                                                                className={`action-chip microservice-chip ${isSelected ? "selected" : ""}`}
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    togglePermission(perm.permissionKey);
-                                                                }}
-                                                            >
-                                                                <div className="chip-header">
-                                                                    <input type="checkbox" checked={isSelected} readOnly />
-                                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                                        <span className="action-name">{perm.resource}</span>
-                                                                        <span className="action-desc">{perm.action}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </label>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    <div className="form-divider" />
 
                     {/* ── Permission Sets Section ── */}
                     <p className="section-title">Permission Sets</p>
                     <p className="section-subtitle">
                         Attach reusable sets of MFEs + APIs. Sets are atomic — attach or detach the whole set.
-                        Direct permissions above always take priority.
                     </p>
                     {loading ? (
                         <p className="status-text loading-pulse">Loading sets…</p>
+                    ) : error ? (
+                        <p className="status-text error">{error}</p>
                     ) : permissionSets.length === 0 ? (
                         <p className="status-text">No permission sets found. Create one in the Registry first.</p>
                     ) : (
@@ -471,70 +182,62 @@ function RoleForm() {
                     )}
 
                     {/* ── Effective Permissions Summary ── */}
-                    {(selectedPermissions.size > 0 || selectedMfes.size > 0 || selectedSetIds.size > 0) && (
+                    {selectedSetIds.size > 0 && (
                         <>
                             <div className="form-divider" />
-                            <p className="section-title" style={{ color: "#0f172a" }}>Effective Permissions Summary</p>
-                            <p className="section-subtitle">
-                                The actual permissions this role will have at runtime.
-                                <span style={{ color: "#4f46e5", fontWeight: 600 }}> Blue</span> = direct, 
-                                <span style={{ color: "#f97316", fontWeight: 600 }}> Orange</span> = from a Permission Set.
-                            </p>
-                            <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "18px 20px" }}>
-                                {/* API Permissions */}
-                                <div style={{ marginBottom: 14 }}>
-                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>
-                                        API Permissions
-                                    </div>
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                        {Array.from(selectedPermissions).map(p => (
-                                            <span key={p} style={{ background: "#eef2ff", color: "#4f46e5", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500 }}>
-                                                {p}
-                                            </span>
-                                        ))}
-                                        {Array.from(inheritedPermissions)
-                                            .filter(p => !selectedPermissions.has(p))
-                                            .map(p => (
-                                                <span key={p} style={{ background: "#fff7ed", color: "#f97316", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, border: "1px dashed #fed7aa" }}>
-                                                    {p}
-                                                </span>
-                                            ))
-                                        }
-                                        {selectedPermissions.size === 0 && inheritedPermissions.size === 0 && (
-                                            <span style={{ color: "#94a3b8", fontSize: 13 }}>None</span>
-                                        )}
-                                    </div>
-                                </div>
-                                {/* MFE Access */}
+                            <div 
+                                className="accordion-header" 
+                                onClick={() => setShowSummaryDetails(!showSummaryDetails)}
+                            >
                                 <div>
-                                    <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>
-                                        MFE Access
-                                    </div>
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                        {Array.from(selectedMfes).map(m => (
-                                            <span key={m} style={{ background: "#eef2ff", color: "#4f46e5", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 500 }}>
-                                                {m}
-                                            </span>
-                                        ))}
-                                        {Array.from(inheritedMfes)
-                                            .filter(m => !selectedMfes.has(m))
-                                            .map(m => (
-                                                <span key={m} style={{ background: "#fff7ed", color: "#f97316", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 500, border: "1px dashed #fed7aa" }}>
+                                    <p className="section-title" style={{ color: "#0f172a", marginBottom: 0 }}>Effective Permissions Summary</p>
+                                    <p className="section-subtitle" style={{ marginBottom: 0 }}>
+                                        Click to view the specific permissions this role will get.
+                                    </p>
+                                </div>
+                                <span className="accordion-icon">{showSummaryDetails ? "▲" : "▼"}</span>
+                            </div>
+
+                            {showSummaryDetails && (
+                                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "18px 20px", marginTop: "16px" }}>
+                                    {/* MFE Access */}
+                                    <div style={{ marginBottom: 14 }}>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>
+                                            MFE Component Access
+                                        </div>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                            {Array.from(inheritedMfes).map(m => (
+                                                <span key={m} style={{ background: "#fff7ed", color: "#f97316", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 500, border: "1px solid #fed7aa" }}>
                                                     {m}
                                                 </span>
-                                            ))
-                                        }
-                                        {selectedMfes.size === 0 && inheritedMfes.size === 0 && (
-                                            <span style={{ color: "#94a3b8", fontSize: 13 }}>None</span>
-                                        )}
+                                            ))}
+                                            {inheritedMfes.size === 0 && (
+                                                <span style={{ color: "#94a3b8", fontSize: 13 }}>None</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* API Permissions */}
+                                    <div>
+                                        <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>
+                                            Backend API Access
+                                        </div>
+                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                            {Array.from(inheritedPermissions).map(p => (
+                                                <span key={p} style={{ background: "#f0fdf4", color: "#16a34a", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, border: "1px solid #bbf7d0" }}>
+                                                    {p}
+                                                </span>
+                                            ))}
+                                            {inheritedPermissions.size === 0 && (
+                                                <span style={{ color: "#94a3b8", fontSize: 13 }}>None</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </>
                     )}
 
                     <div className="form-divider" />
-
 
                     <label
                         className={`permission-item ${isTemp ? "checked" : ""}`}
@@ -717,7 +420,7 @@ const styles = `
     background: #eceffc;
 }
 
-.service-header input, .chip-header input, .permission-item input {
+.service-header input, .permission-item input {
     appearance: none;
     width: 20px;
     height: 20px;
@@ -730,12 +433,12 @@ const styles = `
     flex-shrink: 0;
 }
 
-.service-header input:checked, .chip-header input:checked, .permission-item input:checked {
+.service-header input:checked, .permission-item input:checked {
     background: #090649;
     border-color: #090649;
 }
 
-.service-header input:checked::after, .chip-header input:checked::after, .permission-item input:checked::after {
+.service-header input:checked::after, .permission-item input:checked::after {
     content: '';
     position: absolute;
     top: 3px;
@@ -752,158 +455,6 @@ const styles = `
     color: #1e293b;
     font-size: 15px;
     letter-spacing: 0.5px;
-}
-
-.actions-list {
-    padding: 0 20px 20px 20px;
-    background: #ffffff;
-}
-
-.components-block {
-    padding-top: 20px;
-    border-top: 1px dashed #e2e8f0;
-}
-
-.components-block-continued {
-    padding-top: 16px;
-}
-
-.root-permissions-block {
-    padding-top: 20px;
-    padding-bottom: 20px;
-    border-top: 1px dashed #e2e8f0;
-    background: #fdfdfe;
-}
-
-.actions-title-premium {
-    font-size: 12px;
-    color: #090649;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0;
-}
-
-.section-badge-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-}
-
-.badge-icon {
-    font-size: 14px;
-}
-
-.actions-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 12px;
-    align-items: stretch;
-}
-
-.action-chip {
-    display: flex;
-    flex-direction: column;
-    padding: 14px 16px;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    height: 100%;
-    box-sizing: border-box;
-}
-
-.action-chip:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-}
-
-.action-chip.selected {
-    background: #f4f6ff;
-    border-color: #090649;
-    box-shadow: inset 0 0 0 1px #090649;
-}
-
-.action-chip.microservice-chip.selected {
-    background: #f8f9ff;
-    border-color: #0a0868;
-    box-shadow: inset 0 0 0 1px #0a0868;
-}
-.action-chip.microservice-chip.selected .chip-header input:checked {
-    background: #0a0868;
-    border-color: #0a0868;
-}
-
-.chip-header {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-}
-
-.action-name {
-    font-weight: 600;
-    color: #1e293b;
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.action-desc {
-    color: #64748b;
-    font-size: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    margin-top: 2px;
-}
-
-.api-badge-container {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(226, 232, 240, 0.6);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.api-badge-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.api-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.api-badge {
-    background: #f1f5f9;
-    color: #475569;
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    line-height: 1.2;
-}
-
-.root-badge {
-    background: #eef0fc;
-    color: #090649;
-    border-color: #c7d0fb;
-    font-weight: 500;
-}
-
-.action-chip.selected .api-badge {
-    background: #e8ecfc;
-    color: #090649;
-    border-color: #bac4f5;
 }
 
 .status-text {
@@ -1004,5 +555,25 @@ const styles = `
     box-shadow: none;
     cursor: not-allowed;
     color: #94a3b8;
+}
+
+.accordion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 10px 14px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.accordion-header:hover {
+    background: #e2e8f0;
+}
+
+.accordion-icon {
+    font-size: 14px;
+    color: #64748b;
 }
 `;

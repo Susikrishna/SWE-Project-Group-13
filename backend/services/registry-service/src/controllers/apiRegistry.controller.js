@@ -131,9 +131,12 @@ const getApis = async (req, res) => {
 const updateApi = async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, isPublic, isActive } = req.body;
+    const { basePath, route, method, description, isPublic, isActive } = req.body;
 
     const updateData = {};
+    if (basePath !== undefined) updateData.basePath = basePath.trim();
+    if (route !== undefined) updateData.route = route.trim();
+    if (method !== undefined) updateData.method = method.trim().toUpperCase();
     if (description !== undefined) updateData.description = description?.trim();
     if (isPublic !== undefined) updateData.isPublic = isPublic;
     if (isActive !== undefined) updateData.isActive = isActive;
@@ -146,6 +149,9 @@ const updateApi = async (req, res) => {
 
     res.json(api);
   } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({ error: "Another API with this configuration already exists" });
+    }
     res.status(500).json({ error: err.message });
   }
 };

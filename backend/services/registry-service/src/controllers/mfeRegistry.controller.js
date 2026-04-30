@@ -56,12 +56,14 @@ const getMfes = async (req, res) => {
 const updateMfe = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, remoteUrl, isActive } = req.body;
+    const { name, description, route, remoteUrl, module, isActive } = req.body;
 
     const updateData = {};
     if (name !== undefined) updateData.name = name.trim();
     if (description !== undefined) updateData.description = description?.trim();
+    if (route !== undefined) updateData.route = route.trim();
     if (remoteUrl !== undefined) updateData.remoteUrl = remoteUrl.trim();
+    if (module !== undefined) updateData.module = module.trim();
     if (isActive !== undefined) updateData.isActive = isActive;
 
     const mfe = await MfeRegistry.findByIdAndUpdate(id, updateData, { new: true });

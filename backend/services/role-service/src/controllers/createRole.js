@@ -1,9 +1,8 @@
 const Role = require("../models/Role");
-const MfeRegistry = require("../models/MfeRegistry");
 
 const createRole = async (req, res) => {
     try {
-        const { name, description, permissions, mfeAccess, permissionSets, isTemp, expiresAt, abacPolicies } = req.body;
+        const { name, description, permissionSets, isTemp, expiresAt, abacPolicies } = req.body;
 
         if (!name) {
             return res.status(400).json({ error: "Role name is required" });
@@ -16,12 +15,7 @@ const createRole = async (req, res) => {
             return res.status(409).json({ error: `Role "${name}" already exists` });
         }
 
-        if (permissions && !Array.isArray(permissions)) {
-            return res.status(400).json({ error: "permissions must be an array of strings" });
-        }
-        if (mfeAccess && !Array.isArray(mfeAccess)) {
-            return res.status(400).json({ error: "mfeAccess must be an array of strings" });
-        }
+
         if (permissionSets && !Array.isArray(permissionSets)) {
             return res.status(400).json({ error: "permissionSets must be an array of ObjectId strings" });
         }
@@ -48,41 +42,13 @@ const createRole = async (req, res) => {
             }
         }
 
-        // ── Hard Restriction: MFE-permission whitelist check (RBAC) ────────
-        if (mfeAccess && mfeAccess.length > 0) {
-            const selectedFeatureIds = Array.from(new Set(mfeAccess.map(key => key.split("::")[0])));
-            const registries = await MfeRegistry.find({ feature: { $in: selectedFeatureIds } });
 
-            const whitelist = new Set();
-            registries.forEach(reg => {
-                if (reg.allowedPermissions) reg.allowedPermissions.forEach(p => whitelist.add(p));
-                if (reg.components && Array.isArray(reg.components)) {
-                    reg.components.forEach(comp => {
-                        if (comp.allowedPermissions) comp.allowedPermissions.forEach(p => whitelist.add(p));
-                    });
-                }
-            });
-
-            const unauthorized = (permissions || []).filter(p => !whitelist.has(p));
-            if (unauthorized.length > 0) {
-                return res.status(403).json({
-                    error: "Hard Restriction Violation",
-                    details: `Permissions not authorized by selected MFEs: ${unauthorized.join(", ")}`,
-                });
-            }
-        } else if (permissions && permissions.length > 0) {
-            return res.status(403).json({
-                error: "Hard Restriction Violation",
-                details: "Permissions cannot be assigned without at least one associated MFE.",
-            });
-        }
 
         const role = await Role.create({
             _id: roleId,
             name: name.trim(),
             description,
-            permissions: permissions ?? [],
-            mfeAccess: mfeAccess ?? [],
+
             permissionSets: permissionSets ?? [],
             isTemp: isTemp ?? false,
             expiresAt: isTemp ? expiresAt : null,

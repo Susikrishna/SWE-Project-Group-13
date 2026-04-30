@@ -4,6 +4,7 @@ import { Routes, Route } from "react-router-dom";
 import RegistrationPage from "./pages/RegistrationPage";
 import RegistryListPage from "./pages/RegistryListPage";
 import PermissionSetsPage from "./pages/PermissionSetsPage";
+import ManagePermissionSetsPage from "./pages/ManagePermissionSetsPage";
 import MfeNavbar from "./components/MfeNavbar";
 
 const App = () => {
@@ -14,6 +15,7 @@ const App = () => {
         <Route path="/" element={<RegistrationPage />} />
         <Route path="list" element={<RegistryListPage />} />
         <Route path="permission-sets" element={<PermissionSetsPage />} />
+        <Route path="manage-sets" element={<ManagePermissionSetsPage />} />
       </Routes>
     </div>
   );

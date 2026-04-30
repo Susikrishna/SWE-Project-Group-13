@@ -5,7 +5,6 @@ import { styles } from "../styles/registryTheme";
 const MfeNavbar = () => {
   const { pathname } = useLocation();
 
-  // Helper to check if a link is active
   const isActive = (path) => pathname.endsWith(path);
 
   return (
@@ -27,7 +26,13 @@ const MfeNavbar = () => {
           to="permission-sets"
           style={{ ...styles.barLink, ...(isActive("permission-sets") ? styles.barLinkActive : {}) }}
         >
-          Permission Sets
+          Create Sets
+        </Link>
+        <Link
+          to="manage-sets"
+          style={{ ...styles.barLink, ...(isActive("manage-sets") ? styles.barLinkActive : {}) }}
+        >
+          Manage Sets
         </Link>
       </div>
     </div>

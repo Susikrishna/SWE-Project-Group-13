@@ -4,7 +4,6 @@ const {
     buildRoleSummary,
     extractRoleIdsFromPayload,
     isTempRoleCurrentlyValid,
-    mergeAllowedServices,
     validateRoleIds,
 } = require("../utils/accessProfile");
 const { resolvePermissionSets } = require("../utils/resolvePermissionSets");
@@ -61,8 +60,6 @@ const loadAccessProfile = async (req, res, next) => {
             return res.status(403).json({ error: "All assigned roles are expired" });
         }
 
-        const { mergedPermissions, mergedMfes } = mergeAllowedServices(activeRoles);
-
         // ── 1b. Resolve Permission Sets → union into effective permissions ────
         // Collect all unique set IDs across active roles
         const allSetIds = [
@@ -72,13 +69,53 @@ const loadAccessProfile = async (req, res, next) => {
         ];
         const { additionalPermissions, additionalMfes } = await resolvePermissionSets(allSetIds);
 
-        // Union: direct ∪ from-sets (Set deduplicates)
-        const effectivePermissions = [
-            ...new Set([...mergedPermissions, ...additionalPermissions])
-        ];
-        const effectiveMfes = [
-            ...new Set([...mergedMfes, ...additionalMfes])
-        ];
+        const effectivePermissions = new Set(additionalPermissions);
+        
+        // Parse the returned additionalMfes (e.g. "feature" or "feature::route")
+        const mfeAccessMap = {};
+        for (const mfeKey of additionalMfes) {
+            const [feature, route] = mfeKey.split("::");
+            if (!mfeAccessMap[feature]) {
+                mfeAccessMap[feature] = new Set();
+            }
+            if (route) {
+                mfeAccessMap[feature].add(route);
+            } else {
+                mfeAccessMap[feature].add("*"); // access to all components if just feature is listed
+            }
+        }
+
+        const allowedFeatures = Object.keys(mfeAccessMap);
+
+        // Fetch current active MFE registry entries
+        const MfeRegistry = require("../models/mfeRegistry.model");
+        const activeMfes = await MfeRegistry.find({
+            feature: { $in: allowedFeatures },
+            isActive: { $ne: false },
+        }).lean();
+
+        const allowedMicrofrontends = [];
+
+        for (const mfe of activeMfes) {
+            const allowedComps = mfeAccessMap[mfe.feature];
+            
+            // Filter out components the user doesn't have access to, or that are inactive
+            let activeComponents = [];
+            if (allowedComps && allowedComps.has("*")) {
+                // Empty components in the PermissionSet = root MFE only, no sub-components
+                activeComponents = [];
+            } else if (allowedComps) {
+                activeComponents = (mfe.components || []).filter(c => 
+                    c.isActive !== false && allowedComps.has(c.route)
+                );
+            }
+
+            // Push to the allowed list for the frontend
+            allowedMicrofrontends.push({
+                ...mfe,
+                components: activeComponents
+            });
+        }
 
         // ── 2. Load user's subject attributes for ABAC ───────────────────────
         //   userId is stored in the token as tokenPayload.userId
@@ -115,8 +152,8 @@ const loadAccessProfile = async (req, res, next) => {
             roleIds,
             roles: activeRoles,
             roleSummaries: activeRoles.map(buildRoleSummary),
-            mergedPermissions: effectivePermissions,
-            mergedMfes: effectiveMfes,
+            mergedPermissions: Array.from(effectivePermissions),
+            allowedMicrofrontends,
             subjectAttributes,   // ← available to checkAccess & abacEngine
         };
 

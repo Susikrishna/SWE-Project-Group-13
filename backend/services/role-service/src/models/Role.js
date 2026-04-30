@@ -32,12 +32,8 @@ const roleSchema = new mongoose.Schema(
         name: { type: String, required: true, trim: true },
         description: { type: String, trim: true },
 
-        permissions: { type: [String], default: [] },
-
-        mfeAccess: { type: [String], default: [] },
-
         // References to PermissionSet documents in registry-service DB.
-        // Effective permissions = union(direct permissions, apis from all attached sets).
+        // Effective permissions = union of apis from all attached sets.
         permissionSets: [{ type: mongoose.Schema.Types.ObjectId, default: [] }],
 
         isTemp: { type: Boolean, default: false },

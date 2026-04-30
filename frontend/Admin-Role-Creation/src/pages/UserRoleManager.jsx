@@ -3,6 +3,9 @@ import Navbar from "../components/Navbar";
 import UserAttributesPanel from "../components/UserAttributesPanel";
 import axios from "axios";
 
+const userServiceUrl = import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:3003';
+const roleServiceUrl = import.meta.env.VITE_ROLE_SERVICE_URL || 'http://localhost:3002';
+
 export default function UserRoleManager() {
     const [users, setUsers] = useState([]);
     const [roles, setRoles] = useState([]);
@@ -19,7 +22,7 @@ export default function UserRoleManager() {
 
     const fetchUsers = useCallback(async () => {
         try {
-            const res = await fetch("http://localhost:3004/user");
+            const res = await fetch(`${userServiceUrl}/user`);
             const data = await res.json();
             setUsers(data.users || []);
             setTotalUsers(data.total || 0);
@@ -28,7 +31,7 @@ export default function UserRoleManager() {
 
     const fetchRoles = useCallback(async () => {
         try {
-            const res = await fetch("http://localhost:3002/roles");
+            const res = await fetch(`${roleServiceUrl}/roles`);
             const data = await res.json();
             setRoles(data.roles || data || []);
         } catch { setRoles([]); }
@@ -59,10 +62,10 @@ export default function UserRoleManager() {
         setStatusMsg({ text: "", type: "" });
         try {
             if (operType === operations.ASSIGN) {
-                await axios.post("http://localhost:3004/user/addRole", { username: selectedUser.username, roleArr: selectedRoles });
+                await axios.post(`${userServiceUrl}/user/addRole`, { username: selectedUser.username, roleArr: selectedRoles });
                 setStatusMsg({ text: "Roles assigned successfully!", type: "success" });
             } else if (operType === operations.REMOVE) {
-                await axios.delete("http://localhost:3004/user/clear", { data: { username: selectedUser.username, roleArr: selectedRoles } });
+                await axios.delete(`${userServiceUrl}/user/clear`, { data: { username: selectedUser.username, roleArr: selectedRoles } });
                 setStatusMsg({ text: "Roles removed successfully!", type: "success" });
             }
             fetchUsers();
@@ -74,7 +77,7 @@ export default function UserRoleManager() {
 
     const clearRoles = async () => {
         try {
-            await axios.delete("http://localhost:3004/user/clearAll");
+            await axios.delete(`${userServiceUrl}/user/clearAll`);
             fetchUsers();
         } catch (err) {
             setStatusMsg({ text: err.response?.data?.message || err.message, type: "error" });
@@ -162,22 +165,33 @@ export default function UserRoleManager() {
                         </p>
 
                         <div className="role-pick-list">
-                            {roles.map(role => {
-                                const alreadyHas = (selectedUser.roles || []).map(r => typeof r === "object" ? r._id : r).includes(role._id);
-                                const isSelected = selectedRoles.includes(role._id);
-                                const disabled = operType === operations.ASSIGN && alreadyHas;
-                                return (
-                                    <div
-                                        key={role._id}
-                                        className={`role-pick-chip ${isSelected ? "selected" : ""} ${disabled ? "disabled" : ""}`}
-                                        onClick={() => !disabled && toggleRole(role._id)}
-                                    >
-                                        <span>{role.name}</span>
-                                        {alreadyHas && <span className="has-badge">assigned</span>}
-                                        {role.abacPolicies?.length > 0 && <span className="abac-badge">ABAC</span>}
-                                    </div>
-                                );
-                            })}
+                            {(() => {
+                                const userRoleIds = (selectedUser.roles || []).map(r => typeof r === "object" ? r._id : r);
+                                const visibleRoles = operType === operations.REMOVE
+                                    ? roles.filter(role => userRoleIds.includes(role._id))
+                                    : roles;
+
+                                if (visibleRoles.length === 0) {
+                                    return <p style={{ color: "#9ca3af", fontSize: 13, fontStyle: "italic", margin: 0 }}>No roles to show.</p>;
+                                }
+
+                                return visibleRoles.map(role => {
+                                    const alreadyHas = userRoleIds.includes(role._id);
+                                    const isSelected = selectedRoles.includes(role._id);
+                                    const disabled = operType === operations.ASSIGN && alreadyHas;
+                                    return (
+                                        <div
+                                            key={role._id}
+                                            className={`role-pick-chip ${isSelected ? "selected" : ""} ${disabled ? "disabled" : ""}`}
+                                            onClick={() => !disabled && toggleRole(role._id)}
+                                        >
+                                            <span>{role.name}</span>
+                                            {alreadyHas && operType === operations.ASSIGN && <span className="has-badge">assigned</span>}
+                                            {role.abacPolicies?.length > 0 && <span className="abac-badge">ABAC</span>}
+                                        </div>
+                                    );
+                                });
+                            })()}
                         </div>
 
                         {statusMsg.text && (
@@ -214,67 +228,68 @@ const styles = `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
 .urm-container { padding: 32px; max-width: 1100px; margin: 0 auto; }
-.urm-header    { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+.urm-header    { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
 .urm-title     { font-size: 22px; font-weight: 700; color: #0d0a41; margin: 0; }
-.urm-sub       { font-size: 13px; color: #6b7280; margin: 4px 0 0; }
-.urm-refresh-btn { padding: 7px 16px; border-radius: 8px; border: 1px solid #e4e7f0; background: #fff; color: #4f46e5; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.urm-sub       { font-size: 14px; color: #6b7280; margin: 4px 0 0; }
+.urm-refresh-btn { padding: 7px 16px; border-radius: 8px; border: 1px solid #e4e7f0; background: #fff; color: #4f46e5; font-size: 13px; font-weight: 600; cursor: pointer; }
 .urm-refresh-btn:hover { background: #eef2ff; }
-.urm-danger-btn { padding: 7px 16px; border-radius: 8px; border: none; background: #fef2f2; color: #dc2626; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
-.urm-danger-btn:hover { background: #fee2e2; }
+.urm-danger-btn { padding: 7px 16px; border-radius: 8px; border: 1px solid #fecaca; background: #fff; color: #dc2626; font-size: 13px; font-weight: 600; cursor: pointer; }
+.urm-danger-btn:hover { background: #fef2f2; }
 
-.urm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.urm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 
-.urm-card { background: #fff; border-radius: 12px; border: 1px solid #e4e7f0; padding: 20px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 4px rgba(79,70,229,0.05); transition: box-shadow 0.15s; }
-.urm-card:hover { box-shadow: 0 4px 14px rgba(79,70,229,0.09); }
+.urm-card { background: #fff; border-radius: 12px; border: 1px solid #e4e7f0; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 4px rgba(79,70,229,0.06); transition: box-shadow 0.15s; }
+.urm-card:hover { box-shadow: 0 4px 16px rgba(79,70,229,0.10); }
+
 .urm-card-header { display: flex; align-items: center; gap: 12px; }
-.urm-avatar     { width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #0d0a41 0%, #4f46e5 100%); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; font-weight: 700; flex-shrink: 0; }
+.urm-avatar     { width: 40px; height: 40px; border-radius: 8px; background: #4f46e5; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; flex-shrink: 0; }
 .urm-card-info  { display: flex; flex-direction: column; }
-.urm-card-name  { font-size: 15px; font-weight: 700; color: #0d0a41; }
-.urm-card-username { font-size: 12px; color: #9ca3af; font-family: 'DM Mono', monospace; }
+.urm-card-name  { font-size: 16px; font-weight: 700; color: #0d0a41; }
+.urm-card-username { font-size: 13px; color: #6b7280; font-family: 'DM Mono', monospace; }
 
 .urm-roles-wrap { display: flex; flex-wrap: wrap; gap: 6px; min-height: 24px; }
-.urm-role-chip  { font-size: 11px; background: #eef2ff; color: #4338ca; border-radius: 5px; padding: 2px 9px; font-weight: 600; }
-.urm-empty      { font-size: 12px; color: #d1d5db; }
+.urm-role-chip  { font-size: 12px; background: #eef2ff; color: #4f46e5; border-radius: 6px; padding: 3px 8px; font-weight: 600; }
+.urm-empty      { font-size: 13px; color: #9ca3af; font-style: italic; }
 
-.urm-attrs-preview { display: flex; flex-wrap: wrap; gap: 5px; }
-.urm-attr-chip  { font-size: 10px; font-weight: 600; border-radius: 4px; padding: 2px 7px; }
-.urm-attr-chip.dept  { background: #f0f9ff; color: #0369a1; }
-.urm-attr-chip.clear { background: #fef9c3; color: #92400e; }
-.urm-attr-chip.loc   { background: #f0fdf4; color: #166534; }
-.urm-attr-chip.emp   { background: #fdf4ff; color: #7e22ce; }
+.urm-attrs-preview { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 8px; border-top: 1px solid #e4e7f0; }
+.urm-attr-chip  { font-size: 11px; font-weight: 600; border-radius: 6px; padding: 2px 6px; }
+.urm-attr-chip.dept  { background: #e0f2fe; color: #0369a1; }
+.urm-attr-chip.clear { background: #fef3c7; color: #b45309; }
+.urm-attr-chip.loc   { background: #dcfce7; color: #15803d; }
+.urm-attr-chip.emp   { background: #f3e8ff; color: #7e22ce; }
 
-.urm-card-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.urm-assign-btn { flex: 1; padding: 6px 10px; background: #4f46e5; color: #fff; border: none; border-radius: 7px; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
+.urm-card-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.urm-assign-btn { flex: 1; padding: 6px 10px; background: #4f46e5; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
 .urm-assign-btn:hover { background: #4338ca; }
-.urm-remove-btn { flex: 1; padding: 6px 10px; background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 7px; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
-.urm-remove-btn:hover { background: #fee2e2; }
-.urm-attrs-btn  { padding: 6px 10px; background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 7px; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.15s; }
-.urm-attrs-btn:hover { background: #dcfce7; }
+.urm-remove-btn { flex: 1; padding: 6px 10px; background: #fff; color: #ef4444; border: 1px solid #fecaca; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.urm-remove-btn:hover { background: #fef2f2; }
+.urm-attrs-btn  { padding: 6px 10px; background: #fff; color: #16a34a; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.urm-attrs-btn:hover { background: #f0fdf4; }
 
 .modal-overlay  { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal          { background: #fff; border-radius: 12px; padding: 28px; width: 460px; max-width: 92vw; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
+.modal          { background: #fff; border-radius: 12px; padding: 28px; width: 480px; max-width: 92vw; max-height: 87vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); }
 .modal-header   { display: flex; align-items: center; justify-content: space-between; }
-.modal-header h2 { font-size: 17px; font-weight: 700; color: #0d0a41; margin: 0; }
+.modal-header h2 { font-size: 18px; font-weight: 700; color: #0d0a41; margin: 0; }
 .modal-close    { background: none; border: none; font-size: 16px; cursor: pointer; color: #6b7280; }
 .modal-close:hover { color: #d01d1d; }
-.modal-hint     { font-size: 13px; color: #9ca3af; margin: 0; }
+.modal-hint     { font-size: 13px; color: #6b7280; margin: 0; }
 
 .role-pick-list { display: flex; flex-direction: column; gap: 8px; }
-.role-pick-chip { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; border: 1px solid #e4e7f0; cursor: pointer; font-size: 13px; font-weight: 600; color: #374151; transition: all 0.15s; }
-.role-pick-chip:hover:not(.disabled) { background: #eef2ff; border-color: #a5b4fc; }
-.role-pick-chip.selected { background: #eef2ff; border-color: #4f46e5; color: #4338ca; }
-.role-pick-chip.disabled { opacity: 0.45; cursor: not-allowed; }
-.has-badge  { margin-left: auto; font-size: 10px; background: #f3f4f6; color: #9ca3af; border-radius: 4px; padding: 1px 6px; }
-.abac-badge { font-size: 10px; background: #f0fdf4; color: #16a34a; border-radius: 4px; padding: 1px 6px; border: 1px solid #bbf7d0; }
+.role-pick-chip { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; border: 1px solid #e4e7f0; cursor: pointer; font-size: 14px; font-weight: 600; color: #374151; background: #fff; }
+.role-pick-chip:hover:not(.disabled) { border-color: #cbd5e1; background: #f9fafb; }
+.role-pick-chip.selected { background: #f5f3ff; border-color: #4f46e5; color: #4f46e5; }
+.role-pick-chip.disabled { opacity: 0.5; cursor: not-allowed; background: #f9fafb; }
+.has-badge  { margin-left: auto; font-size: 10px; background: #f3f4f6; color: #6b7280; border-radius: 6px; padding: 2px 6px; text-transform: uppercase; }
+.abac-badge { font-size: 10px; background: #f0fdf4; color: #16a34a; border-radius: 6px; padding: 2px 6px; border: 1px solid #bbf7d0; text-transform: uppercase; }
 
-.modal-msg    { font-size: 13px; border-radius: 8px; padding: 10px 13px; font-weight: 500; }
-.modal-msg.success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-.modal-msg.error   { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.modal-msg    { font-size: 13px; border-radius: 8px; padding: 10px 14px; font-weight: 500; }
+.modal-msg.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.modal-msg.error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
-.modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
-.cancel-btn   { padding: 8px 18px; border-radius: 8px; border: 1px solid #e4e7f0; background: #fff; color: #6b7280; font-size: 14px; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.cancel-btn   { padding: 8px 18px; border-radius: 8px; border: 1px solid #e4e7f0; background: #fff; color: #6b7280; font-size: 14px; cursor: pointer; }
 .cancel-btn:hover { background: #f9fafb; }
-.submit-btn   { padding: 8px 18px; border-radius: 8px; border: none; background: #4f46e5; color: #fff; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.submit-btn   { padding: 8px 18px; border-radius: 8px; border: none; background: #4f46e5; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
 .submit-btn:hover:not(:disabled) { background: #4338ca; }
-.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; background: #9ca3af; }
 `;
