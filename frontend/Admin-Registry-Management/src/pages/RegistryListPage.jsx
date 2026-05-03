@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { styles } from "../styles/registryTheme";
 import { fetchMicroservices, fetchMicrofrontends, searchMicroservices, searchMicrofrontends } from "../services/registryApi";
 import RegistryCard from "../components/RegistryCard";
-import EditRegistryModal from "../components/EditRegistryModal";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 const RegistryListPage = () => {
+  const navigate = useNavigate();
   const [apiItems, setApiItems] = useState([]);
   const [mfeItems, setMfeItems] = useState([]);
-  const [activeTab, setActiveTab] = useState("MFE"); // 'MFE' or 'API'
+  const [activeTab, setActiveTab] = useState("MFE"); // 'MFE' | 'API' | 'SETS'
   const [currentPage, setCurrentPage] = useState(1);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [editingItem, setEditingItem] = useState(null);
+  const [editingId, setEditingId] = useState(null); // Changed to store ID
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Debounce search input
@@ -75,20 +76,19 @@ const RegistryListPage = () => {
 
     loadData();
     return () => { isMounted = false; };
-  }, [debouncedSearch, refreshTrigger]);
+  }, [debouncedSearch, refreshTrigger, activeTab]);
 
   const isSearching = debouncedSearch.length > 0;
 
-  const handleEdit = (item) => setEditingItem(item);
-
   const handleSave = () => {
-    setEditingItem(null);
+    setEditingId(null);
     setRefreshTrigger((prev) => prev + 1);
   };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    setCurrentPage(1); // Reset page on tab change
+    setCurrentPage(1);
+    setEditingId(null);
   };
 
   const currentDataset = activeTab === "MFE" ? mfeItems : apiItems;
@@ -122,44 +122,45 @@ const RegistryListPage = () => {
         </div>
 
         {/* Search Bar */}
-        <div style={{ position: "relative", marginBottom: "32px", marginTop: "16px" }}>
-          <div style={styles.searchWrapper}>
-            <svg
-              style={styles.searchIcon}
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              id="registry-search-bar"
-              type="text"
-              placeholder={`Search ${activeTab === "MFE" ? "Microfrontends" : "APIs"}...`}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={styles.searchInput}
-            />
-            {search && (
-              <button
-                onClick={() => setSearch("")}
-                style={styles.searchClear}
-                aria-label="Clear search"
+        {activeTab !== "SETS" && (
+          <div style={{ position: "relative", marginBottom: "32px", marginTop: "16px" }}>
+            <div style={styles.searchWrapper}>
+              <svg
+                style={styles.searchIcon}
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                ✕
-              </button>
-            )}
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              <input
+                id="registry-search-bar"
+                type="text"
+                placeholder={`Search ${activeTab === "MFE" ? "Microfrontends" : "APIs"}...`}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={styles.searchInput}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  style={styles.searchClear}
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Content */}
         {loading ? (
           <div style={styles.stateBox}>
             <div style={styles.spinner}></div>
@@ -183,7 +184,10 @@ const RegistryListPage = () => {
               <RegistryCard
                 key={item._id || `${item._type}-${index}`}
                 item={item}
-                onEdit={handleEdit}
+                isEditing={editingId === item._id}
+                onEdit={() => setEditingId(item._id)}
+                onSave={handleSave}
+                onCancel={() => setEditingId(null)}
               />
             ))}
             
@@ -212,14 +216,6 @@ const RegistryListPage = () => {
           </div>
         )}
       </div>
-
-      {editingItem && (
-        <EditRegistryModal
-          item={editingItem}
-          onClose={() => setEditingItem(null)}
-          onSave={handleSave}
-        />
-      )}
 
       {/* Spinner keyframes */}
       <style>{`

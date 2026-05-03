@@ -111,8 +111,13 @@ const ANALYTICS_REPORT_PERMISSIONS = [
 ];
 
 // ─── 3. Seed MFE Registry (Microfrontends) ──────────────────────────────────
+const DASHBOARD_MFE_ID = ObjectId("660000000000000000000001");
+const ADMIN_MFE_ID     = ObjectId("660000000000000000000002");
+const ANALYTICS_MFE_ID = ObjectId("660000000000000000000003");
+
 db.mferegistries.insertMany([
   {
+    _id: DASHBOARD_MFE_ID,
     name: "Dashboard App",
     feature: "dashboard-mfe",
     route: "/dashboard",
@@ -139,6 +144,7 @@ db.mferegistries.insertMany([
     description: "User workspace with account summary, billing overview, and notifications."
   },
   {
+    _id: ADMIN_MFE_ID,
     name: "Admin Panel",
     feature: "admin-mfe",
     route: "/admin",
@@ -165,6 +171,7 @@ db.mferegistries.insertMany([
     description: "Internal administration tools for users, sessions, security, and notification configuration."
   },
   {
+    _id: ANALYTICS_MFE_ID,
     name: "Analytics Dashboard",
     feature: "analytics-mfe",
     route: "/analytics",
@@ -200,20 +207,87 @@ db.mferegistries.insertMany([
 ]);
 print("✓ Inserted MFE Registry documents");
 
-// ─── 4. Seed Roles (10 documents) ───────────────────────────────────────────
+// ─── 4. Seed Permission Sets (Using hardcoded ObjectIds) ───────────────
+const SUPER_ADMIN_SET_ID = ObjectId("650000000000000000000001");
+const USER_SET_ID = ObjectId("650000000000000000000002");
+const SUPPORT_SET_ID = ObjectId("650000000000000000000003");
+const FINANCE_SET_ID = ObjectId("650000000000000000000004");
+const PLATFORM_ADMIN_SET_ID = ObjectId("650000000000000000000005");
+const ANALYST_SET_ID = ObjectId("650000000000000000000006");
+const NOTIFICATION_MGR_SET_ID = ObjectId("650000000000000000000007");
+
+db.permissionsets.deleteMany({});
+db.permissionsets.insertMany([
+  {
+    _id: SUPER_ADMIN_SET_ID,
+    name: "Super Admin Bundle",
+    description: "Unrestricted access to all services and admin interfaces.",
+    isActive: true,
+    mfes: [
+      { mfeId: DASHBOARD_MFE_ID, components: [] },
+      { mfeId: ADMIN_MFE_ID, components: [] },
+      { mfeId: ANALYTICS_MFE_ID, components: [] }
+    ],
+    apis: []
+  },
+  {
+    _id: USER_SET_ID,
+    name: "Standard User Bundle",
+    description: "Standard end-user with access to their own data and the dashboard.",
+    isActive: true,
+    mfes: [{ mfeId: DASHBOARD_MFE_ID, components: [] }],
+    apis: []
+  },
+  {
+    _id: SUPPORT_SET_ID,
+    name: "Support Bundle",
+    description: "Customer support staff with dashboard visibility and limited admin tools.",
+    isActive: true,
+    mfes: [{ mfeId: DASHBOARD_MFE_ID, components: [] }, { mfeId: ADMIN_MFE_ID, components: ["/users"] }],
+    apis: []
+  },
+  {
+    _id: FINANCE_SET_ID,
+    name: "Finance Bundle",
+    description: "Full access to billing, invoices, and financial reports.",
+    isActive: true,
+    mfes: [{ mfeId: DASHBOARD_MFE_ID, components: [] }, { mfeId: ANALYTICS_MFE_ID, components: ["/billing", "/reports"] }],
+    apis: []
+  },
+  {
+    _id: PLATFORM_ADMIN_SET_ID,
+    name: "Platform Admin Bundle",
+    description: "Manages system configuration, auth sessions, and audit logs.",
+    isActive: true,
+    mfes: [{ mfeId: ADMIN_MFE_ID, components: ["/users"] }],
+    apis: []
+  },
+  {
+    _id: ANALYST_SET_ID,
+    name: "Analyst Bundle",
+    description: "Read-only access to analytics and exported reports.",
+    isActive: true,
+    mfes: [{ mfeId: ANALYTICS_MFE_ID, components: ["/sales", "/reports"] }],
+    apis: []
+  },
+  {
+    _id: NOTIFICATION_MGR_SET_ID,
+    name: "Notification Manager Bundle",
+    description: "Manages notification templates and sends bulk communications.",
+    isActive: true,
+    mfes: [{ mfeId: ADMIN_MFE_ID, components: ["/permissions"] }],
+    apis: []
+  }
+]);
+print("✓ Inserted Permission Sets");
+
+// ─── 5. Seed Roles (10 documents) ───────────────────────────────────────────
 db.roles.insertMany([
   {
     _id: "role_super-admin",
     name: "super-admin",
     description: "Unrestricted access to all services and admin interfaces.",
-    permissions: [
-      "auth-service:session:create", "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
-      "user-service:user:read", "user-service:user:create", "user-service:user:update", "user-service:user:delete", "user-service:user:list",
-      "billing-service:invoice:read", "billing-service:invoice:create", "billing-service:subscription:read", "billing-service:subscription:update", "billing-service:subscription:cancel", "billing-service:payment:refund",
-      "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage",
-      "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
-    ],
-    mfeAccess: ["dashboard-mfe", "admin-mfe", "analytics-mfe"],
+    permissionSets: [SUPER_ADMIN_SET_ID],
     isTemp: false,
     createdAt: new Date("2024-01-12T08:00:00Z"),
     updatedAt: new Date("2024-01-12T08:00:00Z")
@@ -222,12 +296,7 @@ db.roles.insertMany([
     _id: "role_user",
     name: "user",
     description: "Standard end-user with access to their own data and the dashboard.",
-    permissions: [
-      "user-service:user:read", "user-service:user:update",
-      "billing-service:invoice:read", "billing-service:subscription:read",
-      "notification-service:notification:read"
-    ],
-    mfeAccess: ["dashboard-mfe"],
+    permissionSets: [USER_SET_ID],
     isTemp: false,
     createdAt: new Date("2024-01-12T08:30:00Z"),
     updatedAt: new Date("2024-01-12T08:30:00Z")
@@ -236,12 +305,7 @@ db.roles.insertMany([
     _id: "role_support-agent",
     name: "support-agent",
     description: "Customer support staff with dashboard visibility and limited admin tools.",
-    permissions: [
-      "user-service:user:read", "user-service:user:list", "user-service:user:update",
-      "billing-service:invoice:read", "billing-service:subscription:read",
-      "notification-service:email:send", "notification-service:notification:read"
-    ],
-    mfeAccess: ["dashboard-mfe", "admin-mfe"],
+    permissionSets: [SUPPORT_SET_ID],
     isTemp: false,
     createdAt: new Date("2024-01-20T09:00:00Z"),
     updatedAt: new Date("2024-01-20T09:00:00Z")
@@ -250,11 +314,7 @@ db.roles.insertMany([
     _id: "role_finance-manager",
     name: "finance-manager",
     description: "Full access to billing, invoices, and financial reports.",
-    permissions: [
-      "billing-service:invoice:read", "billing-service:invoice:create", "billing-service:subscription:read", "billing-service:subscription:update", "billing-service:subscription:cancel", "billing-service:payment:refund",
-      "report-service:report:read", "report-service:report:generate", "report-service:report:export", "report-service:report:schedule"
-    ],
-    mfeAccess: ["dashboard-mfe", "analytics-mfe"],
+    permissionSets: [FINANCE_SET_ID],
     isTemp: false,
     createdAt: new Date("2024-02-05T10:00:00Z"),
     updatedAt: new Date("2024-02-05T10:00:00Z")
@@ -263,11 +323,7 @@ db.roles.insertMany([
     _id: "role_platform-admin",
     name: "platform-admin",
     description: "Manages system configuration, auth sessions, and audit logs.",
-    permissions: [
-      "auth-service:session:revoke", "auth-service:token:refresh", "auth-service:mfa:enable", "auth-service:mfa:disable",
-      "user-service:user:read", "user-service:user:list"
-    ],
-    mfeAccess: ["admin-mfe"],
+    permissionSets: [PLATFORM_ADMIN_SET_ID],
     isTemp: false,
     createdAt: new Date("2024-02-10T11:00:00Z"),
     updatedAt: new Date("2024-02-10T11:00:00Z")
@@ -276,11 +332,7 @@ db.roles.insertMany([
     _id: "role_analyst",
     name: "analyst",
     description: "Read-only access to analytics and exported reports.",
-    permissions: [
-      "billing-service:invoice:read", "billing-service:subscription:read",
-      "report-service:report:read", "report-service:report:export"
-    ],
-    mfeAccess: ["analytics-mfe"],
+    permissionSets: [ANALYST_SET_ID],
     isTemp: false,
     createdAt: new Date("2024-03-01T09:00:00Z"),
     updatedAt: new Date("2024-03-01T09:00:00Z")
@@ -289,11 +341,7 @@ db.roles.insertMany([
     _id: "role_notification-manager",
     name: "notification-manager",
     description: "Manages notification templates and sends bulk communications.",
-    permissions: [
-      "notification-service:email:send", "notification-service:sms:send", "notification-service:notification:read", "notification-service:template:manage",
-      "user-service:user:read", "user-service:user:list"
-    ],
-    mfeAccess: ["admin-mfe"],
+    permissionSets: [NOTIFICATION_MGR_SET_ID],
     isTemp: false,
     createdAt: new Date("2024-04-15T10:00:00Z"),
     updatedAt: new Date("2024-04-15T10:00:00Z")
@@ -302,8 +350,7 @@ db.roles.insertMany([
     _id: "role_guest",
     name: "guest",
     description: "Unauthenticated or trial users with very limited access.",
-    permissions: [],
-    mfeAccess: ["dashboard-mfe"],
+    permissionSets: [],
     isTemp: false,
     createdAt: new Date("2024-05-01T08:00:00Z"),
     updatedAt: new Date("2024-05-01T08:00:00Z")
@@ -312,11 +359,7 @@ db.roles.insertMany([
     _id: "role_contractor-dev",
     name: "contractor-dev",
     description: "Temporary developer access for an external contractor engagement.",
-    permissions: [
-      "user-service:user:read", "user-service:user:list",
-      "report-service:report:read", "report-service:report:generate"
-    ],
-    mfeAccess: ["admin-mfe", "analytics-mfe"],
+    permissionSets: [SUPPORT_SET_ID, ANALYST_SET_ID], // Example combination
     isTemp: true,
     expiresAt: new Date("2026-08-31T23:59:59Z"), 
     createdAt: new Date("2025-05-20T12:00:00Z"),
@@ -326,11 +369,7 @@ db.roles.insertMany([
     _id: "role_external-auditor",
     name: "external-auditor",
     description: "Short-term access granted to an external compliance auditor.",
-    permissions: [
-      "billing-service:invoice:read", "billing-service:subscription:read",
-      "report-service:report:read", "report-service:report:export"
-    ],
-    mfeAccess: ["analytics-mfe"],
+    permissionSets: [ANALYST_SET_ID],
     isTemp: true,
     expiresAt: new Date("2026-09-30T23:59:59Z"), 
     createdAt: new Date("2025-08-25T14:00:00Z"),
@@ -339,7 +378,7 @@ db.roles.insertMany([
 ]);
 print("✓ Inserted 10 Role documents");
 
-// ─── 5. Seed Users ──────────────────────────────────────────────────────────
+// ─── 6. Seed Users ──────────────────────────────────────────────────────────
 // Password is "password" hashed with bcrypt (10 rounds)
 const hashedPassword = "$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi";
 

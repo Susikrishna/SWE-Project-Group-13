@@ -4,7 +4,7 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 
 const serverUrl   = import.meta.env.VITE_SERVER_URL || 'http://localhost:3002';
-const registryUrl = import.meta.env.VITE_REGISTRY_URL || 'http://localhost:3001';
+const registryUrl = import.meta.env.VITE_REGISTRY_URL || 'http://localhost:5001';
 
 const RESPONSES = { ALLOW: "ALLOW", DENY: "DENY", NA: "NA" };
 
@@ -15,12 +15,11 @@ function Roles() {
     const [editingRole,setEditingRole]= useState(null);
     const [microfrontends, setMicrofrontends] = useState([]);
     const [microservices,  setMicroservices]  = useState([]);
+    const [permissionSets, setPermissionSets] = useState([]);  // all sets from registry
     const [editDescription,          setEditDescription]          = useState("");
     const [editIsTemp,               setEditIsTemp]               = useState(false);
     const [editExpiresAt,            setEditExpiresAt]            = useState("");
-    const [editSelectedPermissions,  setEditSelectedPermissions]  = useState(new Set());
-    const [editSelectedMfes,         setEditSelectedMfes]         = useState(new Set());
-    const [allowedPermissionsWhitelist, setAllowedPermissionsWhitelist] = useState(new Set());
+    const [editSelectedSetIds,       setEditSelectedSetIds]       = useState(new Set()); // attached sets
 
     // ── NEW: ABAC policies state ──────────────────────────────────────────────
     const [editAbacPolicies, setEditAbacPolicies] = useState([]);
@@ -41,8 +40,7 @@ function Roles() {
         setEditDescription(role.description || "");
         setEditIsTemp(role.isTemp || false);
         setEditExpiresAt(role.expiresAt ? role.expiresAt.split("T")[0] : "");
-        setEditSelectedPermissions(new Set(role.permissions || []));
-        setEditSelectedMfes(new Set(role.mfeAccess || []));
+        setEditSelectedSetIds(new Set((role.permissionSets || []).map(String)));
         setEditAbacPolicies(role.abacPolicies || []);   // ← load existing ABAC policies
         setActiveTab("rbac");
     };
@@ -52,9 +50,10 @@ function Roles() {
     useEffect(() => {
         const fetchRegistries = async () => {
             try {
-                const [mfeRes, svcRes] = await Promise.all([
+                const [mfeRes, svcRes, setsRes] = await Promise.all([
                     axios.get(`${registryUrl}/registry/mfes`),
                     axios.get(`${registryUrl}/registry/services`),
+                    axios.get(`${registryUrl}/registry/permission-sets`)
                 ]);
 
                 const mfes = mfeRes.data.map(m => ({
@@ -78,6 +77,7 @@ function Roles() {
 
                 setMicrofrontends(mfes);
                 setMicroservices(Object.values(groupedServices));
+                setPermissionSets(Array.isArray(setsRes.data) ? setsRes.data : []);
             } catch {
                 setError("Failed to load services. Please try again.");
             }
@@ -87,66 +87,7 @@ function Roles() {
 
     const closeEditModal = () => { setEditingRole(null); };
 
-    useEffect(() => {
-        const activeFeatures = new Set();
-        editSelectedMfes.forEach(key => activeFeatures.add(key.split("::")[0]));
-        const newWhitelist = new Set();
-        activeFeatures.forEach(fid => {
-            const mfe = microfrontends.find(m => m.id === fid);
-            if (mfe) mfe.allowedPermissions.forEach(p => newWhitelist.add(p));
-        });
-        setAllowedPermissionsWhitelist(newWhitelist);
-        setEditSelectedPermissions(prev => {
-            const next = new Set();
-            prev.forEach(p => { if (newWhitelist.has(p)) next.add(p); });
-            return next;
-        });
-    }, [editSelectedMfes, microfrontends]);
 
-    const toggleMfe = (mfeId, components) => {
-        const hasAny = components.some(c => editSelectedMfes.has(c.componentKey));
-        const mfe = microfrontends.find(m => m.id === mfeId);
-        setEditSelectedMfes(prev => {
-            const next = new Set(prev);
-            if (hasAny) { components.forEach(c => next.delete(c.componentKey)); }
-            else {
-                components.forEach(c => next.add(c.componentKey));
-                if (mfe) setEditSelectedPermissions(pPrev => { const pNext = new Set(pPrev); mfe.allowedPermissions.forEach(p => pNext.add(p)); return pNext; });
-            }
-            return next;
-        });
-    };
-
-    const toggleComponent = (componentKey) => {
-        const mfeId = componentKey.split("::")[0];
-        const mfe   = microfrontends.find(m => m.id === mfeId);
-        setEditSelectedMfes(prev => {
-            const next = new Set(prev);
-            const isAdding = !next.has(componentKey);
-            if (next.has(componentKey)) next.delete(componentKey); else next.add(componentKey);
-            if (isAdding) {
-                const alreadySelectedAny = Array.from(prev).some(k => k.startsWith(mfeId + "::"));
-                if (!alreadySelectedAny && mfe) setEditSelectedPermissions(pPrev => { const pNext = new Set(pPrev); mfe.allowedPermissions.forEach(p => pNext.add(p)); return pNext; });
-            }
-            return next;
-        });
-    };
-
-    const toggleService = (permissions) => {
-        const hasAny = permissions.some(p => editSelectedPermissions.has(p.permissionKey));
-        setEditSelectedPermissions(prev => {
-            const next = new Set(prev);
-            if (hasAny) { permissions.forEach(p => next.delete(p.permissionKey)); }
-            else { permissions.forEach(p => next.add(p.permissionKey)); }
-            return next;
-        });
-    };
-
-    const togglePermission = (permissionKey) => {
-        setEditSelectedPermissions(prev => {
-            const next = new Set(prev); next.has(permissionKey) ? next.delete(permissionKey) : next.add(permissionKey); return next;
-        });
-    };
 
     const handleDelete = async (roleId) => {
         try {
@@ -161,8 +102,7 @@ function Roles() {
                 roleId:      editingRole._id,
                 name,
                 description: editDescription,
-                permissions: Array.from(editSelectedPermissions),
-                mfeAccess:   Array.from(editSelectedMfes),
+                permissionSets: Array.from(editSelectedSetIds),
                 isTemp:      editIsTemp,
                 ...(editIsTemp && { expiresAt: editExpiresAt }),
                 abacPolicies: editAbacPolicies,   // ← send ABAC policies
@@ -193,6 +133,9 @@ function Roles() {
                             <div className="role-card-header">
                                 <span className="role-name">{role.name}</span>
                                 {role.isTemp && <span className="badge badge-temp">Temporary</span>}
+                                {role.permissionSets?.length > 0 && (
+                                    <span className="badge badge-sets">{role.permissionSets.length} Set{role.permissionSets.length !== 1 ? 's' : ''}</span>
+                                )}
                                 {role.abacPolicies?.length > 0 && (
                                     <span className="badge badge-abac">ABAC</span>
                                 )}
@@ -204,25 +147,46 @@ function Roles() {
                                 <div className="role-dates"><span>Expires: {formatDate(role.expiresAt)}</span></div>
                             )}
 
-                            <div className="role-section">
-                                <div className="section-label">API Permissions</div>
-                                <div className="tag-list">
-                                    {role.permissions?.length > 0
-                                        ? role.permissions.map(p => <span key={p} className="tag tag-green">{p}</span>)
-                                        : <span className="empty-tag">No permissions</span>}
+                            {/* ── Permission Sets ── */}
+                            {role.permissionSets?.length > 0 && (
+                                <div className="role-section">
+                                    <div className="section-label">Permission Sets</div>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                        {role.permissionSets.map((id) => {
+                                            const set = permissionSets.find(s => s._id === String(id));
+                                            if (!set) return (
+                                                <span key={String(id)} className="tag tag-set">
+                                                    🔑 {String(id).slice(-8)}…
+                                                </span>
+                                            );
+                                            return (
+                                                <div key={String(id)} style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: 8, padding: "7px 10px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: set.mfes?.length || set.apis?.length ? 6 : 0 }}>
+                                                        <span style={{ fontSize: 13, fontWeight: 700, color: "#0d9488" }}>🔑 {set.name}</span>
+                                                        {set.description && <span style={{ fontSize: 11, color: "#94a3b8" }}>{set.description}</span>}
+                                                    </div>
+                                                    {(set.mfes?.length > 0 || set.apis?.length > 0) && (
+                                                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                                            {(set.mfes || []).map(m => (
+                                                                <span key={m._id} style={{ background: "#f5f3ff", color: "#7c3aed", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
+                                                                    {m.name || m.feature}
+                                                                </span>
+                                                            ))}
+                                                            {(set.apis || []).map(a => (
+                                                                <span key={a._id} style={{ background: "#e0f2fe", color: "#0369a1", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontFamily: "monospace" }}>
+                                                                    {a.permissionKey}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
-                            <div className="role-section">
-                                <div className="section-label">MFE Access</div>
-                                <div className="tag-list">
-                                    {role.mfeAccess?.length > 0
-                                        ? role.mfeAccess.map(m => <span key={m} className="tag tag-purple">{m}</span>)
-                                        : <span className="empty-tag">No MFE access</span>}
-                                </div>
-                            </div>
-
-                            {/* ── NEW: ABAC policy summary ── */}
+                            {/* ── ABAC policy summary ── */}
                             {role.abacPolicies?.length > 0 && (
                                 <div className="role-section">
                                     <div className="section-label">ABAC Policies</div>
@@ -237,6 +201,8 @@ function Roles() {
                                 </div>
                             )}
                         </div>
+
+
                     ))}
                 </div>
             </div>
@@ -271,83 +237,50 @@ function Roles() {
                                     <input type="text" value={editDescription} onChange={e => setEditDescription(e.target.value)} />
                                 </div>
 
-                                <div className="form-divider" />
-                                <p className="section-title">Microfrontend Access</p>
-                                {microfrontends.length === 0 ? (
-                                    <p className="status-text">No microfrontends registered.</p>
+
+
+                                {/* ── Permission Sets ── */}
+                                <p className="section-title">Permission Sets</p>
+                                {permissionSets.length === 0 ? (
+                                    <p className="status-text">No permission sets. Create one in the Registry.</p>
                                 ) : (
                                     <div className="service-list">
-                                        {microfrontends.map(item => {
-                                            const hasAny = item.components.some(c => editSelectedMfes.has(c.componentKey));
+                                        {permissionSets.map(set => {
+                                            const attached = editSelectedSetIds.has(set._id);
                                             return (
-                                                <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                                    <div className="service-header" onClick={() => toggleMfe(item.id, item.components)}>
-                                                        <input type="checkbox" checked={hasAny} readOnly />
-                                                        <span className="service-name">{item.label}</span>
-                                                    </div>
-                                                    {hasAny && item.components.length > 0 && (
-                                                        <div className="actions-list">
-                                                            <p className="actions-title">Components:</p>
-                                                            <div className="actions-grid">
-                                                                {item.components.map(comp => {
-                                                                    const isSel = editSelectedMfes.has(comp.componentKey);
-                                                                    return (
-                                                                        <div key={comp.componentKey} className={`action-chip ${isSel ? "selected" : ""}`} onClick={e => { e.stopPropagation(); toggleComponent(comp.componentKey); }}>
-                                                                            <input type="checkbox" checked={isSel} readOnly />
-                                                                            <span className="action-name">{comp.name} :&nbsp;</span>
-                                                                            <span className="action-desc">{comp.route}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
+                                                <div
+                                                    key={set._id}
+                                                    className={`service-card ${attached ? "checked" : ""}`}
+                                                    style={{ cursor: "pointer" }}
+                                                    onClick={() => setEditSelectedSetIds(prev => {
+                                                        const next = new Set(prev);
+                                                        attached ? next.delete(set._id) : next.add(set._id);
+                                                        return next;
+                                                    })}
+                                                >
+                                                    <div className="service-header" style={{ pointerEvents: "none" }}>
+                                                        <input type="checkbox" checked={attached} readOnly />
+                                                        <div style={{ flex: 1 }}>
+                                                            <span className="service-name">{set.name}</span>
+                                                            {set.description && <span style={{ marginLeft: 8, fontSize: 11, color: "#9ca3af" }}>{set.description}</span>}
                                                         </div>
-                                                    )}
+                                                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                                                            {(set.mfes || []).map(m => (
+                                                                <span key={m._id} style={{ background: "#f5f3ff", color: "#7c3aed", borderRadius: 10, padding: "1px 7px", fontSize: 10, fontWeight: 600 }}>{m.name || m.feature}</span>
+                                                            ))}
+                                                            {(set.apis || []).slice(0, 2).map(a => (
+                                                                <span key={a._id} style={{ background: "#e0f2fe", color: "#0369a1", borderRadius: 10, padding: "1px 7px", fontSize: 10, fontFamily: "monospace" }}>{a.permissionKey}</span>
+                                                            ))}
+                                                            {(set.apis || []).length > 2 && <span style={{ background: "#f1f5f9", color: "#64748b", borderRadius: 10, padding: "1px 7px", fontSize: 10 }}>+{set.apis.length - 2}</span>}
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 )}
 
-                                <div className="form-divider" />
-                                <p className="section-title">Microservice Permissions</p>
-                                {microfrontends.length > 0 && editSelectedMfes.size === 0 ? (
-                                    <p className="status-text warning">Select a Microfrontend first.</p>
-                                ) : microservices.length === 0 ? (
-                                    <p className="status-text">No microservices registered.</p>
-                                ) : (
-                                    <div className="service-list">
-                                        {microservices.map(item => {
-                                            const filteredPerms = item.permissions.filter(p => allowedPermissionsWhitelist.has(p.permissionKey));
-                                            if (filteredPerms.length === 0) return null;
-                                            const hasAny = filteredPerms.some(p => editSelectedPermissions.has(p.permissionKey));
-                                            return (
-                                                <div key={item.id} className={`service-card ${hasAny ? "checked" : ""}`}>
-                                                    <div className="service-header" onClick={() => toggleService(filteredPerms)}>
-                                                        <input type="checkbox" checked={hasAny} readOnly />
-                                                        <span className="service-name">{item.label}</span>
-                                                    </div>
-                                                    {hasAny && (
-                                                        <div className="actions-list">
-                                                            <p className="actions-title">Resource List:</p>
-                                                            <div className="actions-grid">
-                                                                {filteredPerms.map(perm => {
-                                                                    const isSel = editSelectedPermissions.has(perm.permissionKey);
-                                                                    return (
-                                                                        <div key={perm.permissionKey} className={`action-chip ${isSel ? "selected" : ""}`} onClick={e => { e.stopPropagation(); togglePermission(perm.permissionKey); }}>
-                                                                            <input type="checkbox" checked={isSel} readOnly />
-                                                                            <span className="action-name">{perm.resource} :&nbsp;</span>
-                                                                            <span className="action-desc">{perm.action}</span>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+
 
                                 <div className="form-divider" />
                                 <div className={`permission-item ${editIsTemp ? "checked" : ""}`} onClick={() => setEditIsTemp(!editIsTemp)}>
@@ -363,12 +296,18 @@ function Roles() {
                             </>
                         )}
 
+
                         {/* ── ABAC Tab ── */}
                         {activeTab === "abac" && (
                             <AbacPolicyBuilder
                                 policies={editAbacPolicies}
                                 onChange={setEditAbacPolicies}
-                                permissions={Array.from(editSelectedPermissions)}
+                                permissions={Array.from(new Set(
+                                    Array.from(editSelectedSetIds).flatMap(id => {
+                                        const s = permissionSets.find(x => x._id === id);
+                                        return s ? (s.apis || []).map(a => a.permissionKey || a) : [];
+                                    })
+                                ))}
                             />
                         )}
 
@@ -404,6 +343,7 @@ const styles = `
 .badge           { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 .badge-temp      { background: #fff7ed; color: #f97316; border: 1px solid #fed7aa; }
 .badge-abac      { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.badge-sets      { background: #ecfdf5; color: #0d9488; border: 1px solid #99f6e4; }
 .role-description { font-size: 13px; color: #6b7280; line-height: 1.5; }
 .role-dates      { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #f97316; background: #fff7ed; padding: 6px 10px; border-radius: 8px; }
 .role-section    { display: flex; flex-direction: column; gap: 8px; }
@@ -412,6 +352,7 @@ const styles = `
 .tag             { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
 .tag-purple      { background: #eef2ff; color: #4f46e5; }
 .tag-green       { background: #f0fdf4; color: #16a34a; }
+.tag-set         { background: #f0fdfa; color: #0d9488; border: 1px solid #99f6e4; font-size: 11px; font-weight: 600; }
 .tag-abac        { background: #fef9c3; color: #92400e; border: 1px solid #fde68a; font-size: 11px; font-family: 'DM Mono', monospace; cursor: default; }
 .empty-tag       { font-size: 12px; color: #d1d5db; }
 
@@ -466,3 +407,4 @@ const styles = `
 .submit-btn      { padding: 8px 18px; border-radius: 8px; border: none; background: #4f46e5; color: #fff; font-size: 14px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
 .submit-btn:hover { background: #4338ca; }
 `;
+

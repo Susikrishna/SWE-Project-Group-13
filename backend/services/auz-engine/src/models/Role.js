@@ -18,14 +18,10 @@ const roleSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
-        // Flattened array of API permission strings (e.g., ["user-svc:profile:read"])
-        permissions: {
-            type: [String],
-            default: [],
-        },
-        // Flattened array of frontend feature IDs (e.g., ["set-ui"])
-        mfeAccess: {
-            type: [String],
+        // References to PermissionSet docs in registry-service.
+        // Used by loadAccessProfile to compute the effective permission union.
+        permissionSets: {
+            type: [mongoose.Schema.Types.Mixed],
             default: [],
         },
         isTemp: {

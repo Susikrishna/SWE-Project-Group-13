@@ -16,7 +16,8 @@ const LogList = () => {
 
     const fetchLogs = async () => {
         try {
-            const res = await axios.get("http://localhost:3000/log");
+            const baseUrl = import.meta.env.VITE_AUZ_ENGINE_URL || "http://localhost:3000";
+            const res = await axios.get(`${baseUrl}/log`);
             if (!res.data.success) throw new Error(res.data.message);
             setLogs(res.data.data);
         } catch (err) {

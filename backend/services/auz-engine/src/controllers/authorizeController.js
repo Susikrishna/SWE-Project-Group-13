@@ -1,33 +1,16 @@
-const MfeRegistry = require("../models/mfeRegistry.model");
+
 const { hasPermission } = require("../utils/accessProfile");
 const { evaluateInlinePolicy } = require("../utils/abacEngine");
 const { resolvePermission } = require("../utils/resolvePermission");
 
-/**
- * GET /auth/authorize
- * Returns the full flat permission + MFE arrays for the requesting user.
- * Filters for active MFEs and active sub-components.
- */
 const authorize = async (req, res) => {
-  const { userId, roleSummaries, mergedPermissions, mergedMfes } = req.accessProfile;
-
-  // Fetch current active MFE registry entries so the React shell knows what to load.
-  const allowedMicrofrontends = await MfeRegistry.find({
-    feature: { $in: mergedMfes },
-    isActive: { $ne: false },
-  }).lean();
-
-  const activeMicrofrontends = allowedMicrofrontends.map((mfe) => ({
-    ...mfe,
-    components: (mfe.components || []).filter((component) => component.isActive !== false),
-  }));
+  const { userId, roleSummaries, allowedMicrofrontends } = req.accessProfile;
 
   return res.status(200).json({
     userId,
     role: roleSummaries[0] || null,
     roles: roleSummaries,
-    permissions: mergedPermissions, // e.g. ["user-svc:profile:read"]
-    microfrontends: activeMicrofrontends, // Sends back route/remoteUrl/module plus permission mappings
+    microfrontends: allowedMicrofrontends,
   });
 };
 

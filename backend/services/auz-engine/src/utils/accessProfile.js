@@ -34,24 +34,7 @@ function buildRoleSummary(role) {
     };
 }
 
-function mergeAllowedServices(roles) {
-    // Use Sets to automatically deduplicate permissions across multiple roles
-    const permissionSet = new Set();
-    const mfeSet = new Set();
 
-    for (const role of roles) {
-        // Flatten API permissions (e.g., "user-svc:profile:read")
-        (role.permissions || []).forEach(perm => permissionSet.add(perm.toLowerCase()));
-        
-        // Flatten UI access slugs (e.g., "set-ui")
-        (role.mfeAccess || []).forEach(mfe => mfeSet.add(mfe.toLowerCase()));
-    }
-
-    return { 
-        mergedPermissions: Array.from(permissionSet), 
-        mergedMfes: Array.from(mfeSet) 
-    };
-}
 
 function hasPermission(accessProfile, permissionKey) {
     // O(1) instant lookup check against the flattened array
@@ -64,6 +47,5 @@ module.exports = {
     extractRoleIdsFromPayload,
     hasPermission,
     isTempRoleCurrentlyValid,
-    mergeAllowedServices,
     validateRoleIds,
 };

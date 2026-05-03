@@ -27,7 +27,8 @@ export default function UserAttributesPanel({ user, onSaved, onClose }) {
         setMsg(null);
         try {
             const customTags = tagsInput.split(",").map(t => t.trim()).filter(Boolean);
-            await axios.put("http://localhost:3004/user/attributes", {
+            const userServiceUrl = import.meta.env.VITE_USER_SERVICE_URL || 'http://localhost:3003';
+            await axios.put(`${userServiceUrl}/user/attributes`, {
                 username: user.username,
                 attributes: {
                     department:   dept      || null,

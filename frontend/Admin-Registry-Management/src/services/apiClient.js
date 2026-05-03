@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 1. Create the base instance using your Environment Variable
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_REGISTRY_URL || 'http://localhost:3001',
+  baseURL: import.meta.env.VITE_REGISTRY_URL || 'http://localhost:5001',
   timeout: 10000, // Automatically cancel if backend takes longer than 10s
   headers: {
     'Content-Type': 'application/json',
