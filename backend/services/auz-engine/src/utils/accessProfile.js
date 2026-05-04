@@ -37,9 +37,12 @@ function buildRoleSummary(role) {
 
 
 function hasPermission(accessProfile, permissionKey) {
-    // O(1) instant lookup check against the flattened array
+    // Lazy-init a Set for O(1) lookups (cached per request lifecycle)
+    if (!accessProfile._permissionSet) {
+        accessProfile._permissionSet = new Set(accessProfile.mergedPermissions);
+    }
     const normalizedKey = String(permissionKey).trim().toLowerCase();
-    return accessProfile.mergedPermissions.includes(normalizedKey);
+    return accessProfile._permissionSet.has(normalizedKey);
 }
 
 module.exports = {

@@ -53,18 +53,11 @@ const MfeGrid = ({ mfes, mfeSelection, toggleMfe, toggleComponent }) => (
               </div>
               <div style={{ fontSize: '10px', color: '#94a3b8', fontFamily: "'DM Mono', monospace", marginTop: '1px' }}>{mfe.route}</div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
-              {mfe.allowedPermissions?.length > 0 && (
-                <span style={{ background: '#eef2ff', color: '#4f46e5', borderRadius: '6px', padding: '1px 6px', fontSize: '9px', fontWeight: '700' }}>
-                  {mfe.allowedPermissions.length} APIs
-                </span>
-              )}
-              {comps.length > 0 && (
-                <span style={{ background: '#f1f5f9', color: '#64748b', borderRadius: '6px', padding: '1px 6px', fontSize: '9px', fontWeight: '600' }}>
-                  {selectedCompCount}/{comps.length} comps
-                </span>
-              )}
-            </div>
+            {comps.length > 0 && (
+              <span style={{ background: '#f1f5f9', color: '#64748b', borderRadius: '6px', padding: '1px 6px', fontSize: '9px', fontWeight: '600', flexShrink: 0 }}>
+                {selectedCompCount}/{comps.length} comps
+              </span>
+            )}
           </div>
 
           {/* Subcomponents */}
@@ -73,36 +66,46 @@ const MfeGrid = ({ mfes, mfeSelection, toggleMfe, toggleComponent }) => (
               <div style={{ fontSize: '9px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '3px' }}>Subcomponents</div>
               {comps.map(comp => {
                 const isSel = compSel.has(comp.route);
+
+                // Check if this component's permissions are already fully covered by the root MFE's permissions
+                const rootPerms = new Set((mfe.allowedPermissions || []).map(p => p.toLowerCase()));
+                const compPerms = (comp.allowedPermissions || []);
+                const isCoveredByRoot = rootSel && compPerms.length > 0 && compPerms.every(p => rootPerms.has(p.toLowerCase()));
+                const isLocked = isCoveredByRoot;
+                const showAsChecked = isSel || isLocked;
+
                 return (
                   <div 
                     key={comp.route} 
-                    className={`ps-comp-chip${isSel ? ' sel' : ''}`} 
-                    onClick={e => { e.stopPropagation(); toggleComponent(mfe._id, comp.route); }} 
+                    className={`ps-comp-chip${showAsChecked ? ' sel' : ''}${isLocked ? ' locked' : ''}`} 
+                    onClick={e => { e.stopPropagation(); if (!isLocked) toggleComponent(mfe._id, comp.route); }} 
                     style={{ 
-                      display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '8px', cursor: 'pointer', 
-                      background: isSel ? '#eef2ff' : '#f8fafc', 
-                      border: `1px solid ${isSel ? '#a5b4fc' : '#e2e8f0'}`, transition: 'all 0.15s',
-                      opacity: comp.isActive === false ? 0.6 : 1
+                      display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', borderRadius: '8px', 
+                      cursor: isLocked ? 'not-allowed' : 'pointer', 
+                      background: isLocked ? '#f1f5f9' : (isSel ? '#eef2ff' : '#f8fafc'), 
+                      border: `1px solid ${isLocked ? '#cbd5e1' : (isSel ? '#a5b4fc' : '#e2e8f0')}`, 
+                      transition: 'all 0.15s',
+                      opacity: comp.isActive === false ? 0.6 : (isLocked ? 0.7 : 1)
                     }}
                   >
                     <div style={{ 
                       width: '14px', height: '14px', borderRadius: '4px', flexShrink: 0, 
-                      border: `2px solid ${isSel ? '#4f46e5' : '#cbd5e1'}`, 
-                      background: isSel ? '#4f46e5' : '#fff', 
+                      border: `2px solid ${showAsChecked ? (isLocked ? '#94a3b8' : '#4f46e5') : '#cbd5e1'}`, 
+                      background: showAsChecked ? (isLocked ? '#94a3b8' : '#4f46e5') : '#fff', 
                       display: 'flex', alignItems: 'center', justifyContent: 'center' 
                     }}>
-                      {isSel && <span style={{ color: '#fff', fontSize: '8px', fontWeight: '900', lineHeight: 1 }}>✓</span>}
+                      {showAsChecked && <span style={{ color: '#fff', fontSize: '8px', fontWeight: '900', lineHeight: 1 }}>{isLocked ? '🔒' : '✓'}</span>}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#1e293b' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '600', color: isLocked ? '#64748b' : '#1e293b' }}>
                         {comp.name}
                         {comp.isActive === false && <span style={{ marginLeft: '6px', color: '#ef4444', fontSize: '8px', fontWeight: '900' }}>OFF</span>}
                       </div>
                       <div style={{ fontSize: '9px', color: '#94a3b8', fontFamily: "'DM Mono', monospace" }}>{comp.route}</div>
                     </div>
-                    {comp.allowedPermissions?.length > 0 && (
-                      <span style={{ fontSize: '9px', color: '#16a34a', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '5px', padding: '1px 5px', fontWeight: '600', flexShrink: 0 }}>
-                        +{comp.allowedPermissions.length} APIs
+                    {isLocked && (
+                      <span style={{ fontSize: '8px', color: '#64748b', background: '#e2e8f0', borderRadius: '5px', padding: '1px 6px', fontWeight: '700', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        Covered by root
                       </span>
                     )}
                   </div>

@@ -13,6 +13,9 @@ const logger = (action) => async (req, res, next) => {
 
             if (action === "authorize") {
                 decision = "BULK";
+            } else if (action === "check-access") {
+                // checkAccess always returns 200 — inspect body.allowed instead
+                decision = body?.allowed === false ? "DENY" : "ALLOW";
             } else if (res.statusCode >= 200 && res.statusCode < 300) {
                 decision = "ALLOW";
             } else {
@@ -24,7 +27,7 @@ const logger = (action) => async (req, res, next) => {
             await Log.create({
                 timestamp: new Date(),
                 userId: req.accessProfile?.userId ?? "NA",
-                roleId: req.accessProfile?.roleIds[0] ?? null,
+                roleId: req.accessProfile?.roleIds?.[0] ?? null,
                 action,
                 permission: req.body?.permissionKey ?? null,
                 decision,
