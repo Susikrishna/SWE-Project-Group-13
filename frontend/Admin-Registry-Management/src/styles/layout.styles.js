@@ -20,7 +20,7 @@ export const layout = {
     width: "100%",
     height: "100vh",
     background:
-      "radial-gradient(circle at center, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 60%)",
+      "radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0) 60%)",
     animation: "waveMove 15s ease-in-out infinite",
     willChange: "transform",
     transform: "translateZ(0)",
@@ -34,7 +34,7 @@ export const layout = {
     width: "100%",
     height: "100vh",
     background:
-      "radial-gradient(circle at center, rgba(226, 232, 240, 0.6) 0%, rgba(226, 232, 240, 0) 60%)",
+      "radial-gradient(circle at center, rgba(255,255,255, 0.02) 0%, rgba(255,255,255, 0) 60%)",
     animation: "waveMove2 20s ease-in-out infinite",
     willChange: "transform",
     transform: "translateZ(0)",
