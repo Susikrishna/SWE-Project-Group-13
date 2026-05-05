@@ -159,17 +159,17 @@ function RoleForm() {
                                             </div>
                                             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                                                 {(set.mfes || []).map(m => (
-                                                    <span key={m._id} style={{ background: "#f5f3ff", color: "#7c3aed", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
+                                                    <span key={m._id} style={{ background: "rgba(99, 102, 241, 0.2)", color: "#818cf8", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 600, border: "1px solid rgba(129, 140, 248, 0.3)" }}>
                                                         {m.name || m.feature}
                                                     </span>
                                                 ))}
                                                 {(set.apis || []).slice(0, 3).map(a => (
-                                                    <span key={a._id} style={{ background: "#e0f2fe", color: "#0369a1", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }}>
+                                                    <span key={a._id} style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontFamily: "'JetBrains Mono', monospace", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
                                                         {a.permissionKey}
                                                     </span>
                                                 ))}
                                                 {(set.apis || []).length > 3 && (
-                                                    <span style={{ background: "#f1f5f9", color: "#64748b", borderRadius: 10, padding: "2px 8px", fontSize: 11 }}>
+                                                    <span style={{ background: "rgba(255, 255, 255, 0.1)", color: "#cbd5e1", borderRadius: 10, padding: "2px 8px", fontSize: 11, border: "1px solid rgba(255, 255, 255, 0.2)" }}>
                                                         +{set.apis.length - 3} more
                                                     </span>
                                                 )}
@@ -199,7 +199,7 @@ function RoleForm() {
                             </div>
 
                             {showSummaryDetails && (
-                                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 14, padding: "18px 20px", marginTop: "16px" }}>
+                                <div style={{ background: "rgba(0, 0, 0, 0.2)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: 14, padding: "18px 20px", marginTop: "16px" }}>
                                     {/* MFE Access */}
                                     <div style={{ marginBottom: 14 }}>
                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>
@@ -207,7 +207,7 @@ function RoleForm() {
                                         </div>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                                             {Array.from(inheritedMfes).map(m => (
-                                                <span key={m} style={{ background: "#fff7ed", color: "#f97316", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 500, border: "1px solid #fed7aa" }}>
+                                                <span key={m} style={{ background: "rgba(249, 115, 22, 0.2)", color: "#fdba74", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontWeight: 500, border: "1px solid rgba(249, 115, 22, 0.3)" }}>
                                                     {m}
                                                 </span>
                                             ))}
@@ -223,7 +223,7 @@ function RoleForm() {
                                         </div>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                                             {Array.from(inheritedPermissions).map(p => (
-                                                <span key={p} style={{ background: "#f0fdf4", color: "#16a34a", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, border: "1px solid #bbf7d0" }}>
+                                                <span key={p} style={{ background: "rgba(34, 197, 94, 0.2)", color: "#86efac", borderRadius: 10, padding: "3px 10px", fontSize: 12, fontFamily: "'JetBrains Mono', monospace", fontWeight: 500, border: "1px solid rgba(34, 197, 94, 0.3)" }}>
                                                     {p}
                                                 </span>
                                             ))}
@@ -288,18 +288,19 @@ const styles = `
     align-items: flex-start;
     font-family: 'Inter', sans-serif;
     padding: 40px 20px;
-    background: #f4f6fb;
+    background: transparent;
     min-height: 100vh;
 }
 
 .role-form {
-    background: #ffffff;
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 48px;
     border-radius: 24px;
     width: 65%;
     max-width: 900px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .form-header {
@@ -309,14 +310,14 @@ const styles = `
 .form-header h2 {
     font-size: 28px;
     font-weight: 800;
-    color: #0f172a;
+    color: #f8fafc;
     letter-spacing: -0.5px;
     margin: 0;
 }
 
 .form-divider {
     height: 1px;
-    background: linear-gradient(to right, transparent, rgba(226, 232, 240, 0.8), transparent);
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.1), transparent);
     margin: 36px 0;
 }
 
@@ -329,7 +330,7 @@ const styles = `
     margin-bottom: 10px;
     font-size: 13px;
     font-weight: 700;
-    color: #475569;
+    color: #94a3b8;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -339,9 +340,9 @@ const styles = `
     width: 100%;
     padding: 14px 18px;
     border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    background: #f8fafc;
-    color: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
+    color: #f8fafc;
     font-family: 'Inter', sans-serif;
     font-size: 15px;
     font-weight: 500;
@@ -351,15 +352,15 @@ const styles = `
 }
 
 .form-group input:focus {
-    border-color: #090649;
-    box-shadow: 0 0 0 4px rgba(9, 6, 73, 0.1);
-    background: #ffffff;
+    border-color: #94a3b8;
+    box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.2);
+    background: rgba(0, 0, 0, 0.4);
 }
 
 .section-title {
     font-size: 14px;
     font-weight: 700;
-    color: #0f172a;
+    color: #f8fafc;
     text-transform: uppercase;
     letter-spacing: 1.2px;
     margin-bottom: 6px;
@@ -367,7 +368,7 @@ const styles = `
 
 .section-subtitle {
     font-size: 13px;
-    color: #64748b;
+    color: #94a3b8;
     margin-bottom: 24px;
     margin-top: 0;
 }
@@ -379,23 +380,23 @@ const styles = `
 }
 
 .service-card {
-    border: 1px solid #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
-    background: #ffffff;
+    background: rgba(0, 0, 0, 0.2);
     transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: hidden;
 }
 
 .service-card:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .service-card.checked {
-    border-color: #090649;
-    background: #fafbff;
-    box-shadow: 0 4px 16px rgba(9, 6, 73, 0.06);
+    border-color: #475569;
+    background: rgba(51, 65, 85, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .service-header {
@@ -404,20 +405,20 @@ const styles = `
     gap: 14px;
     padding: 18px 20px;
     cursor: pointer;
-    background: #f8fafc;
+    background: transparent;
     transition: background 0.2s;
 }
 
 .service-card.checked .service-header {
-    background: #f4f6ff;
+    background: transparent;
 }
 
 .service-header:hover {
-    background: #f1f5f9;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .service-card.checked .service-header:hover {
-    background: #eceffc;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .service-header input, .permission-item input {
@@ -425,8 +426,8 @@ const styles = `
     width: 20px;
     height: 20px;
     border-radius: 6px;
-    border: 2px solid #cbd5e1;
-    background: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
     cursor: pointer;
     position: relative;
     transition: all 0.2s ease;
@@ -434,8 +435,8 @@ const styles = `
 }
 
 .service-header input:checked, .permission-item input:checked {
-    background: #090649;
-    border-color: #090649;
+    background: #334155;
+    border-color: #475569;
 }
 
 .service-header input:checked::after, .permission-item input:checked::after {
@@ -452,32 +453,32 @@ const styles = `
 
 .service-name {
     font-weight: 700;
-    color: #1e293b;
+    color: #f8fafc;
     font-size: 15px;
     letter-spacing: 0.5px;
 }
 
 .status-text {
     font-size: 14px;
-    color: #64748b;
+    color: #94a3b8;
     font-weight: 500;
     padding: 24px;
     text-align: center;
-    background: #f8fafc;
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 12px;
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
 .status-text.error {
     color: #ef4444;
-    background: #fef2f2;
-    border-color: #fecaca;
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
 }
 
 .status-text.warning {
     color: #f59e0b;
-    background: #fffbeb;
-    border-color: #fde68a;
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
 }
 
 .loading-pulse {
@@ -495,22 +496,22 @@ const styles = `
     gap: 14px;
     padding: 16px 20px;
     border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.2);
     cursor: pointer;
     font-weight: 600;
-    color: #334155;
+    color: #f8fafc;
     transition: all 0.2s;
 }
 
 .permission-item:hover {
-    background: #f8fafc;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .permission-item.checked {
-    background: #f4f6ff;
-    border-color: #090649;
-    color: #090649;
+    background: rgba(51, 65, 85, 0.3);
+    border-color: #475569;
+    color: #f8fafc;
 }
 
 .date-range {
@@ -519,15 +520,15 @@ const styles = `
     gap: 16px;
     margin-top: 16px;
     padding: 20px;
-    background: #f8fafc;
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 12px;
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
 .submit-btn {
     width: 100%;
     padding: 18px;
-    background: #090734;
+    background: linear-gradient(135deg, #334155, #475569);
     color: white;
     border: none;
     border-radius: 14px;
@@ -536,25 +537,24 @@ const styles = `
     font-weight: 700;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 6px 16px rgba(9, 7, 52, 0.2);
+    box-shadow: 0 4px 15px rgba(51, 65, 85, 0.4);
 }
 
 .submit-btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    background: #0d0a4c;
-    box-shadow: 0 10px 20px rgba(9, 7, 52, 0.3);
+    box-shadow: 0 6px 20px rgba(51, 65, 85, 0.6);
 }
 
 .submit-btn:active:not(:disabled) {
     transform: translateY(1px);
-    box-shadow: 0 4px 10px rgba(9, 7, 52, 0.2);
+    box-shadow: 0 4px 10px rgba(51, 65, 85, 0.3);
 }
 
 .submit-btn:disabled {
-    background: #cbd5e1;
+    background: rgba(255, 255, 255, 0.1);
     box-shadow: none;
     cursor: not-allowed;
-    color: #94a3b8;
+    color: #64748b;
 }
 
 .accordion-header {
@@ -563,17 +563,17 @@ const styles = `
     align-items: center;
     cursor: pointer;
     padding: 10px 14px;
-    background: #f1f5f9;
+    background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
     transition: background 0.2s;
 }
 
 .accordion-header:hover {
-    background: #e2e8f0;
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .accordion-icon {
     font-size: 14px;
-    color: #64748b;
+    color: #94a3b8;
 }
 `;
