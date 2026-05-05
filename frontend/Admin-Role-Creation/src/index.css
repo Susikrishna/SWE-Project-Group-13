@@ -1,7 +1,7 @@
 /* Glassmorphism theme for entire app */
 
 body {
-    background: linear-gradient(135deg, #090649, #4f46e5, #0a0a0a) !important;
+    background: linear-gradient(135deg, #0f172a, #1e293b, #020617) !important;
     background-size: 400% 400% !important;
     animation: gradientBG 15s ease infinite !important;
     color: #f8fafc !important;
@@ -58,7 +58,7 @@ h1, h2, h3, .form-header h2, .section-title, .roles-title, .urm-title,
     color: #ffffff !important;
 }
 .navbar-logo span {
-    color: #818cf8 !important;
+    color: #94a3b8 !important;
 }
 .nav-link {
     color: #e2e8f0 !important;
@@ -82,24 +82,24 @@ input[type="text"], input[type="date"], select, .form-group input,
     transition: all 0.3s ease !important;
 }
 input:focus, select:focus {
-    border-color: #818cf8 !important;
-    box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.2) !important;
+    border-color: #94a3b8 !important;
+    box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.2) !important;
     outline: none !important;
     background: rgba(0, 0, 0, 0.4) !important;
 }
 
 /* Buttons */
 .submit-btn, .assign-btn, .btn-primary, .urm-assign-btn, .abac-add-policy-btn, .refresh-btn, .urm-refresh-btn {
-    background: linear-gradient(135deg, #4f46e5, #818cf8) !important;
+    background: linear-gradient(135deg, #334155, #475569) !important;
     color: #ffffff !important;
     border: none !important;
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4) !important;
+    box-shadow: 0 4px 15px rgba(51, 65, 85, 0.4) !important;
     transition: all 0.3s ease !important;
     border-radius: 8px !important;
 }
 .submit-btn:hover, .assign-btn:hover, .btn-primary:hover, .urm-assign-btn:hover, .abac-add-policy-btn:hover, .refresh-btn:hover, .urm-refresh-btn:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6) !important;
+    box-shadow: 0 6px 20px rgba(51, 65, 85, 0.6) !important;
 }
 .submit-btn:disabled, .refresh-btn:disabled, .urm-refresh-btn:disabled {
     background: rgba(255, 255, 255, 0.1) !important;
@@ -149,7 +149,7 @@ input:focus, select:focus {
 
 /* Make checkboxes look better */
 input[type="checkbox"] {
-    accent-color: #818cf8 !important;
+    accent-color: #94a3b8 !important;
     width: 18px !important;
     height: 18px !important;
     cursor: pointer !important;
@@ -164,8 +164,8 @@ input[type="checkbox"] {
     background: rgba(255, 255, 255, 0.1) !important;
 }
 .modal-tab.active {
-    color: #818cf8 !important;
-    border-bottom-color: #818cf8 !important;
+    color: #e2e8f0 !important;
+    border-bottom-color: #e2e8f0 !important;
 }
 
 /* Status Msg */
