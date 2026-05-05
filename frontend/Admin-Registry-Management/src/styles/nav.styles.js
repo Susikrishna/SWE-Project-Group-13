@@ -11,7 +11,7 @@ export const nav = {
     justifyContent: "center",
     padding: "8px 12px",
     background:
-      "linear-gradient(135deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.3) 100%)",
+      "rgba(255, 255, 255, 0.05)",
     backdropFilter: "blur(32px)",
     WebkitBackdropFilter: "blur(32px)",
     border: "1px solid rgba(255, 255, 255, 0.5)",
@@ -25,7 +25,7 @@ export const nav = {
   barNav: {
     display: "flex",
     gap: "4px",
-    background: "rgba(15, 23, 42, 0.04)",
+    background: "rgba(0,0,0,0.2)",
     padding: "6px",
     borderRadius: "14px",
   },
@@ -45,8 +45,8 @@ export const nav = {
   },
 
   barLinkActive: {
-    background: "#ffffff",
-    color: "#0f172a",
+    background: "#334155",
+    color: "#f8fafc",
     boxShadow: "0 2px 10px rgba(0, 0, 0, 0.06)",
   },
 };
