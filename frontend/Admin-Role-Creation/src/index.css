@@ -1,0 +1,221 @@
+/* Glassmorphism theme for entire app */
+
+body {
+    background: linear-gradient(135deg, #090649, #4f46e5, #0a0a0a) !important;
+    background-size: 400% 400% !important;
+    animation: gradientBG 15s ease infinite !important;
+    color: #f8fafc !important;
+    font-family: 'DM Sans', 'Inter', sans-serif !important;
+    min-height: 100vh;
+    margin: 0;
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Base override for containers to make them glass */
+.role-container, .role-form, .service-card, .top-navbar, .manager-container, 
+.manager-card, .roles-container, .role-card, .user-card, .abac-card, 
+.permission-item, .dashboard-wrapper, .log-item, .actions-grid, .date-range, 
+.table-container, .modal, .modal-content, .audit-container, .filter-bar,
+.urm-container, .urm-card, .role-pick-chip, .user-attr-panel, .abac-builder, .abac-policy,
+.audit-card, .audit-stat {
+    background: rgba(255, 255, 255, 0.05) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
+    color: #ffffff !important;
+    border-radius: 16px !important;
+}
+
+/* Modals */
+.modal-overlay {
+    background: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+}
+
+/* Texts */
+h1, h2, h3, .form-header h2, .section-title, .roles-title, .urm-title, 
+.urm-card-name, .role-name, .service-name, .modal-header h2, .action-name {
+    color: #ffffff !important;
+}
+.section-subtitle, .status-text, .urm-sub, .urm-card-username, .role-description,
+.form-group label, .modal-hint, .action-desc, .date-label, .fl-label, .log-date {
+    color: #cbd5e1 !important;
+}
+
+/* Navbar */
+.top-navbar {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 0 !important;
+}
+.navbar-logo {
+    color: #ffffff !important;
+}
+.navbar-logo span {
+    color: #818cf8 !important;
+}
+.nav-link {
+    color: #e2e8f0 !important;
+}
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+.nav-link.active {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+/* Inputs & Selects */
+input[type="text"], input[type="date"], select, .form-group input, 
+.search-input, .fl-input, .date-input {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+}
+input:focus, select:focus {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.2) !important;
+    outline: none !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Buttons */
+.submit-btn, .assign-btn, .btn-primary, .urm-assign-btn, .abac-add-policy-btn, .refresh-btn, .urm-refresh-btn {
+    background: linear-gradient(135deg, #4f46e5, #818cf8) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4) !important;
+    transition: all 0.3s ease !important;
+    border-radius: 8px !important;
+}
+.submit-btn:hover, .assign-btn:hover, .btn-primary:hover, .urm-assign-btn:hover, .abac-add-policy-btn:hover, .refresh-btn:hover, .urm-refresh-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.6) !important;
+}
+.submit-btn:disabled, .refresh-btn:disabled, .urm-refresh-btn:disabled {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #94a3b8 !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+.cancel-btn, .urm-remove-btn, .urm-attrs-btn, .edit-button, .del-button, .btn {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    transition: all 0.3s ease !important;
+    border-radius: 8px !important;
+}
+.cancel-btn:hover, .urm-remove-btn:hover, .urm-attrs-btn:hover, .edit-button:hover, .btn:hover {
+    background: rgba(255, 255, 255, 0.15) !important;
+    border-color: #ffffff !important;
+}
+.del-button:hover, .urm-danger-btn:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+}
+
+/* Chips, Tags, Badges */
+.tag-purple, .urm-role-chip, .badge, .urm-attr-chip, .action-chip, .tag-set, .tag-abac, .badge-temp, .badge-abac, .badge-sets {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    color: #e2e8f0 !important;
+}
+.urm-attr-chip.dept, .urm-attr-chip.clear, .urm-attr-chip.loc, .urm-attr-chip.emp {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+}
+
+/* Animations */
+.role-card, .urm-card, .service-card, .log-item, .role-pick-chip {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.role-card:hover, .urm-card:hover, .service-card:hover, .log-item:hover, .role-pick-chip:hover:not(.disabled) {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Make checkboxes look better */
+input[type="checkbox"] {
+    accent-color: #818cf8 !important;
+    width: 18px !important;
+    height: 18px !important;
+    cursor: pointer !important;
+}
+
+/* Tab buttons */
+.modal-tab {
+    color: #cbd5e1 !important;
+}
+.modal-tab:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+.modal-tab.active {
+    color: #818cf8 !important;
+    border-bottom-color: #818cf8 !important;
+}
+
+/* Status Msg */
+.modal-msg.success {
+    background: rgba(16, 185, 129, 0.1) !important;
+    color: #34d399 !important;
+    border-color: #059669 !important;
+}
+.modal-msg.error, .status-msg.error {
+    background: rgba(239, 68, 68, 0.1) !important;
+    color: #f87171 !important;
+    border-color: #dc2626 !important;
+}
+
+/* Accordion */
+.accordion-header {
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: white !important;
+}
+.accordion-header:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Overriding specific structural background issues */
+div[style*="background: #f0f2f9"], 
+div[style*="background: rgb(240, 242, 249)"] {
+    background: transparent !important;
+}
+
+.audit-row {
+    background: transparent !important;
+}
+
+.audit-card th {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: white !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.audit-card td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Fix Status Text background */
+.status-text {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px dashed rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Fix input placeholders */
+::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+}

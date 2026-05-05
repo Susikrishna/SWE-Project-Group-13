@@ -115,7 +115,7 @@ function Roles() {
     const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString();
 
     return (
-        <div style={{ minHeight: "120vh", background: "#f0f2f9" }}>
+        <div style={{ minHeight: "120vh" }}>
             <Navbar />
             <style>{styles}</style>
             <div className="roles-container">
