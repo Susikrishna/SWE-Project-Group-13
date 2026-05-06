@@ -80,9 +80,9 @@ const PermissionSetsPage = () => {
       <style>{`
         @keyframes waveMove  { 0%,100%{transform:scale(1) translate(0,0);}  50%{transform:scale(1.15) translate(3%,2%);} }
         @keyframes waveMove2 { 0%,100%{transform:scale(1.1) translate(0,0);} 50%{transform:scale(1) translate(-3%,-2%);} }
-        .ps-mfe-root:hover { background: rgba(255, 255, 255, 0.05) !important; }
-        .ps-comp-chip:hover { border-color: rgba(255, 255, 255, 0.3) !important; background: rgba(255, 255, 255, 0.05) !important; }
-        .ps-comp-chip.sel { background: rgba(51, 65, 85, 0.5) !important; border-color: #475569 !important; }
+        .ps-mfe-root:hover { background: rgba(238,242,255,0.6) !important; }
+        .ps-comp-chip:hover { border-color: #a5b4fc !important; background: #f5f3ff !important; }
+        .ps-comp-chip.sel { background: #eef2ff !important; border-color: #4f46e5 !important; }
       `}</style>
       <div style={styles.wave}></div>
       <div style={styles.wave2}></div>
@@ -107,7 +107,7 @@ const PermissionSetsPage = () => {
             
             {/* MFE Search Bar */}
             <div style={{ position: "relative", marginBottom: "20px" }}>
-              <div style={{ ...styles.searchWrapper, background: 'rgba(0, 0, 0, 0.2)' }}>
+              <div style={{ ...styles.searchWrapper, background: 'rgba(255,255,255,0.6)' }}>
                 <svg style={styles.searchIcon} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input 
                   type="text" 
@@ -128,7 +128,7 @@ const PermissionSetsPage = () => {
             {loading ? (
               <div style={{ color: '#94a3b8', fontSize: '14px' }}>Loading MFEs…</div>
             ) : filteredMfes.length === 0 ? (
-              <div style={{ color: '#fbbf24', fontSize: '14px', padding: '16px', background: 'rgba(245, 158, 11, 0.1)', borderRadius: '10px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+              <div style={{ color: '#f59e0b', fontSize: '14px', padding: '16px', background: '#fffbeb', borderRadius: '10px', border: '1px solid #fde68a' }}>
                 {search ? "No MFEs match your search." : "No MFEs registered yet."}
               </div>
             ) : (
@@ -142,12 +142,12 @@ const PermissionSetsPage = () => {
                 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '24px', padding: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', marginTop: '24px', padding: '16px', borderTop: '1px solid #e2e8f0' }}>
                     <button 
                       type="button"
                       disabled={currentPage === 1}
                       onClick={() => setCurrentPage(p => p - 1)}
-                      style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.2)', color: '#f8fafc', fontSize: '13px', fontWeight: 600, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
+                      style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontSize: '13px', fontWeight: 600, cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
                     >
                       Prev
                     </button>
@@ -156,7 +156,7 @@ const PermissionSetsPage = () => {
                       type="button"
                       disabled={currentPage === totalPages}
                       onClick={() => setCurrentPage(p => p + 1)}
-                      style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.2)', background: 'rgba(0, 0, 0, 0.2)', color: '#f8fafc', fontSize: '13px', fontWeight: 600, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
+                      style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontSize: '13px', fontWeight: 600, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.5 : 1 }}
                     >
                       Next
                     </button>
@@ -172,7 +172,7 @@ const PermissionSetsPage = () => {
       </div>
 
       {toast && (
-        <div style={{ position: 'fixed', bottom: '30px', right: '30px', background: toast.type === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)', color: toast.type === 'error' ? '#f87171' : '#4ade80', padding: '16px 24px', borderRadius: '12px', border: `1px solid ${toast.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`, fontWeight: '600', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 9999 }}>
+        <div style={{ position: 'fixed', bottom: '30px', right: '30px', background: toast.type === 'error' ? '#fef2f2' : '#f0fdf4', color: toast.type === 'error' ? '#dc2626' : '#16a34a', padding: '16px 24px', borderRadius: '12px', border: `1px solid ${toast.type === 'error' ? '#fecaca' : '#bbf7d0'}`, fontWeight: '600', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 9999 }}>
           {toast.msg}
         </div>
       )}

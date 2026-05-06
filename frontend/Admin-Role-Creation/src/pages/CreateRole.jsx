@@ -6,7 +6,7 @@ function CreateRolePage() {
     const navigate = useNavigate();
     const location = useLocation();
     return (
-        <div style={{ minHeight: "120vh" }}>
+        <div style={{ minHeight: "120vh", background: "#f0f2f9" }}>
             <Navbar />
             <RoleForm />
         </div>

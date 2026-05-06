@@ -19,9 +19,9 @@ const C = {
   green:       "#16a34a",
   purple:      "#7c3aed",
   sky:         "#0284c7",
-  grid:        "rgba(255,255,255,0.12)",
-  text:        "#ffffff",
-  textMuted:   "#cbd5e1",
+  grid:        "rgba(100,116,139,0.12)",
+  text:        "#1e293b",
+  textMuted:   "#64748b",
 };
 
 const DECISION_COLORS = { ALLOW: C.teal, DENY: C.rose, BULK: C.amber };
@@ -82,7 +82,8 @@ function ChartCanvas({ id, height = 260, builder, deps }) {
 // ─── Stat card ───────────────────────────────────────────────────────────────
 function StatCard({ label, value, sub, accent }) {
   return (
-    <div className="audit-stat" style={{
+    <div style={{
+      background: "#fff",
       border: `1px solid #e2e8f0`,
       borderRadius: 12,
       padding: "20px 22px",
@@ -101,7 +102,8 @@ function StatCard({ label, value, sub, accent }) {
 // ─── Section card ────────────────────────────────────────────────────────────
 function Card({ title, badge, children, style }) {
   return (
-    <div className="audit-card" style={{
+    <div style={{
+      background: "#fff",
       border: "1px solid #e2e8f0",
       borderRadius: 14,
       padding: "24px 26px",
@@ -336,7 +338,7 @@ const AuditDashboard = () => {
 
   // ── render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif", minHeight: "100vh", padding: "28px 32px" }}>
+    <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#f8fafc", minHeight: "100vh", padding: "28px 32px" }}>
       <style>{css}</style>
 
       {/* ── Header ── */}
@@ -557,7 +559,7 @@ const AuditDashboard = () => {
               </thead>
               <tbody>
                 {pagedLogs.map((log, i) => (
-                  <tr key={log._id || i} className="audit-row" style={{ borderBottom: "1px solid #f1f5f9" }}>
+                  <tr key={log._id || i} style={{ borderBottom: "1px solid #f1f5f9", background: i % 2 ? "#f8fafc" : "#fff" }}>
                     <td style={{ padding: "8px 10px", whiteSpace: "nowrap", color: C.textMuted, fontFamily: "'DM Mono', monospace", fontSize: 11 }}>
                       {new Date(log.timestamp).toLocaleString()}
                     </td>

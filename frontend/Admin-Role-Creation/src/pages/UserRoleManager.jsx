@@ -85,7 +85,7 @@ export default function UserRoleManager() {
     };
 
     return (
-        <div style={{ minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ background: "#f0f2f9", minHeight: "100vh", fontFamily: "'DM Sans', sans-serif" }}>
             <Navbar />
             <style>{styles}</style>
 

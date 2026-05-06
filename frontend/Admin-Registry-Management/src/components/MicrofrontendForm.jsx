@@ -564,14 +564,14 @@ const MicrofrontendForm = () => {
           gap: 14px;
         }
         .service-card {
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid #e5e7eb;
           border-radius: 10px;
-          background: rgba(0, 0, 0, 0.2);
+          background: #fafafa;
           transition: border 0.2s, background 0.2s;
         }
         .service-card.checked {
-          border-color: #475569;
-          background: rgba(51, 65, 85, 0.3);
+          border-color: #090649;
+          background: #eef2ff;
         }
         .service-header {
           display: flex;
@@ -581,7 +581,7 @@ const MicrofrontendForm = () => {
           cursor: pointer;
         }
         .service-header:hover {
-          background: rgba(255, 255, 255, 0.05);
+          background: #eef0fd;
           border-radius: 10px;
         }
         .service-header input {
@@ -589,23 +589,23 @@ const MicrofrontendForm = () => {
           width: 17px;
           height: 17px;
           border-radius: 5px;
-          border: 1.5px solid rgba(255, 255, 255, 0.3);
-          background: transparent;
+          border: 1.5px solid #d1d5db;
+          background: white;
           margin: 0;
           cursor: pointer;
         }
         .service-header input:checked {
-          background: #334155;
-          border-color: #475569;
+          background: #090649;
+          border-color: #040220;
         }
         .service-name {
           font-weight: 600;
-          color: #f8fafc;
+          color: #111827;
           font-size: 14px;
         }
         .actions-list {
           padding: 14px 16px 18px 16px;
-          border-top: 1px solid rgba(255, 255, 255, 0.1);
+          border-top: 1px solid #e5e7eb;
         }
         .actions-title {
           font-size: 12px;
@@ -624,40 +624,40 @@ const MicrofrontendForm = () => {
           gap: 8px;
           padding: 9px 10px;
           border-radius: 7px;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
           cursor: pointer;
           font-size: 13px;
           font-family: 'DM Mono', monospace;
           transition: all 0.15s;
         }
         .action-chip:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.3);
+          background: #eef0fd;
+          border-color: #c7d0fb;
         }
         .action-chip.selected {
-          background: rgba(51, 65, 85, 0.5);
-          border-color: #475569;
+          background: #eef2ff;
+          border-color: #090649;
         }
         .action-chip input {
           appearance: none;
           width: 15px;
           height: 15px;
           border-radius: 4px;
-          border: 1.5px solid rgba(255, 255, 255, 0.3);
+          border: 1.5px solid #d1d5db;
           margin: 0;
           cursor: pointer;
         }
         .action-chip input:checked {
-          background: #334155;
-          border-color: #475569;
+          background: #090649;
+          border-color: #040220;
         }
         .action-name {
           font-weight: 600;
-          color: #f8fafc;
+          color: #0f172a;
         }
         .action-desc {
-          color: #94a3b8;
+          color: #6b7280;
         }
       `}</style>
     </>
@@ -706,8 +706,8 @@ const formStyles = {
     marginTop: "8px",
     padding: "24px",
     borderRadius: "18px",
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(226,232,240,0.8)",
+    background: "rgba(248,250,252,0.7)",
     backdropFilter: "blur(8px)",
   },
   sectionHeader: {
@@ -721,7 +721,7 @@ const formStyles = {
   sectionTitle: {
     fontSize: "13px",
     fontWeight: 700,
-    color: "#f8fafc",
+    color: "#0f172a",
     marginBottom: "2px",
     textTransform: "uppercase",
     letterSpacing: "0.7px",
@@ -739,9 +739,9 @@ const formStyles = {
     fontSize: "12.5px",
     fontWeight: 600,
     background: "transparent",
-    border: "1px solid rgba(255,255,255,0.2)",
+    border: "1px solid #cbd5e1",
     borderRadius: "10px",
-    color: "#cbd5e1",
+    color: "#475569",
     cursor: "pointer",
     transition: "all 0.18s ease",
     fontFamily: "'DM Sans', sans-serif",
@@ -752,9 +752,9 @@ const formStyles = {
   emptyState: {
     textAlign: "center",
     padding: "32px 16px",
-    border: "1.5px dashed rgba(255,255,255,0.2)",
+    border: "1.5px dashed rgba(203,213,225,0.8)",
     borderRadius: "14px",
-    background: "rgba(0,0,0,0.2)",
+    background: "rgba(255,255,255,0.5)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -764,7 +764,7 @@ const formStyles = {
   emptyTitle: {
     fontSize: "13.5px",
     fontWeight: 600,
-    color: "#f8fafc",
+    color: "#475569",
     margin: 0,
   },
   emptySub: {
@@ -776,8 +776,8 @@ const formStyles = {
 
   /* Component card */
   compCard: {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(255,255,255,0.1)",
+    background: "rgba(255,255,255,0.85)",
+    border: "1px solid rgba(226,232,240,0.9)",
     borderRadius: "14px",
     overflow: "hidden",
     boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
@@ -787,8 +787,8 @@ const formStyles = {
     alignItems: "center",
     gap: "10px",
     padding: "12px 16px",
-    borderBottom: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(0,0,0,0.2)",
+    borderBottom: "1px solid rgba(226,232,240,0.7)",
+    background: "rgba(248,250,252,0.8)",
   },
   compIndex: {
     width: "24px",
@@ -808,7 +808,7 @@ const formStyles = {
   compCardTitle: {
     fontSize: "12.5px",
     fontWeight: 700,
-    color: "#cbd5e1",
+    color: "#475569",
     textTransform: "uppercase",
     letterSpacing: "0.5px",
   },
@@ -846,7 +846,7 @@ const formStyles = {
     width: "28px",
     height: "28px",
     borderRadius: "8px",
-    border: "1px solid rgba(255,255,255,0.2)",
+    border: "1px solid #e2e8f0",
     background: "transparent",
     color: "#94a3b8",
     fontSize: "12px",
@@ -881,9 +881,9 @@ const formStyles = {
   fieldInput: {
     padding: "10px 14px",
     borderRadius: "10px",
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(0,0,0,0.2)",
-    color: "#f8fafc",
+    border: "1px solid rgba(203,213,225,0.7)",
+    background: "rgba(255,255,255,0.9)",
+    color: "#0f172a",
     fontSize: "13.5px",
     fontFamily: "'DM Mono', monospace",
     outline: "none",
